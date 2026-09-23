@@ -131,10 +131,11 @@ fn apply(app: &AppHandle, tray: &TrayIcon, inner: &Inner) -> tauri::Result<()> {
     tray.set_icon_as_template(true)?;
 
     let snapshot = inner.snapshot.as_ref().filter(|_| inner.status.is_up());
+    let numbers = inner.settings.number_format;
     let title = snapshot.and_then(|s| match inner.settings.title_mode {
-        TitleMode::SessionTokens => Some(format::compact(s.session.tokens_saved)),
+        TitleMode::SessionTokens => Some(format::tokens(s.session.tokens_saved, numbers)),
         TitleMode::SessionUsd => Some(format::usd(s.session.total_usd)),
-        TitleMode::LifetimeTokens => Some(format::compact(s.lifetime.tokens_saved)),
+        TitleMode::LifetimeTokens => Some(format::tokens(s.lifetime.tokens_saved, numbers)),
         TitleMode::LifetimeUsd => Some(format::usd(s.lifetime.total_usd)),
         TitleMode::IconOnly => None,
     });
@@ -148,7 +149,7 @@ fn apply(app: &AppHandle, tray: &TrayIcon, inner: &Inner) -> tauri::Result<()> {
         (Status::Offline, _) => format!("Headroom proxy offline · port {}", inner.settings.port),
         (_, Some(s)) => format!(
             "Session: {} tokens · {} saved",
-            format::compact(s.session.tokens_saved),
+            format::tokens(s.session.tokens_saved, numbers),
             format::usd(s.session.total_usd)
         ),
         (_, None) => "Headroom proxy online".to_owned(),

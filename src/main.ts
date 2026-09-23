@@ -6,11 +6,11 @@ import wordOnDark from "../branding/svg/wordmark-dark-bg.svg";
 import wordOnLight from "../branding/svg/wordmark-light-bg.svg";
 import offlineGlyph from "../branding/svg/tray-light-offline.svg";
 
-import { api, type AppState, errorMessage, events, type Settings, type Snapshot, type TitleMode } from "./api";
+import { api, type AppState, errorMessage, events, type NumberFormat, type Settings, type Snapshot, type TitleMode } from "./api";
 import { append, h, icon, type IconName } from "./dom";
 import * as fmt from "./format";
 
-type View = "main" | "settings";
+type View = "main" | "settings" | "method";
 
 const root = document.getElementById("app") as HTMLElement;
 let state: AppState | null = null;
@@ -42,13 +42,18 @@ function iconButton(name: IconName, label: string, onClick: () => void): HTMLBut
   return h("button", { class: "icon-btn", title: label, attrs: { "aria-label": label, type: "button" }, onClick }, icon(name));
 }
 
-function button(label: string, onClick: () => void, opts: { icon?: IconName; kind?: string } = {}): HTMLButtonElement {
-  return h(
+function button(
+  label: string,
+  onClick: (el: HTMLButtonElement) => void,
+  opts: { icon?: IconName; kind?: string } = {},
+): HTMLButtonElement {
+  const el: HTMLButtonElement = h(
     "button",
-    { class: `btn ${opts.kind ?? ""}`.trim(), attrs: { type: "button" }, onClick },
+    { class: `btn ${opts.kind ?? ""}`.trim(), attrs: { type: "button" }, onClick: () => onClick(el) },
     opts.icon ? icon(opts.icon, 15) : null,
     h("span", { text: label }),
   );
+  return el;
 }
 
 function statusPill(s: AppState): HTMLElement {
@@ -80,13 +85,39 @@ function toast(message: string, kind: "ok" | "error" = "ok"): void {
   toastTimer = window.setTimeout(() => el.remove(), 2600);
 }
 
-async function run(action: () => Promise<unknown>, success?: string): Promise<void> {
+async function run(action: () => Promise<unknown>, success?: string, busy?: HTMLButtonElement): Promise<void> {
+  if (busy) {
+    busy.disabled = true;
+    busy.setAttribute("aria-busy", "true");
+  }
   try {
     await action();
     if (success) toast(success);
   } catch (err) {
     toast(errorMessage(err), "error");
+  } finally {
+    busy?.removeAttribute("aria-busy");
+    if (busy) busy.disabled = false;
   }
+}
+
+// ---- numbers ---------------------------------------------------------------------
+
+const exactNumbers = (): boolean => state?.settings.numberFormat === "exact";
+
+function tokens(n: number): string {
+  return exactNumbers() ? fmt.grouped(n) : fmt.compact(n);
+}
+
+/** Exact value for tooltips when the short form is on screen. */
+function exactTitle(n: number, unit = "tokens"): string | undefined {
+  return exactNumbers() ? undefined : `${fmt.grouped(n)} ${unit}`;
+}
+
+function providerName(id: string | null): string {
+  const names: Record<string, string> = { anthropic: "Anthropic", openai: "OpenAI", google: "Google", gemini: "Google" };
+  if (!id) return "your provider";
+  return names[id.toLowerCase()] ?? id.charAt(0).toUpperCase() + id.slice(1);
 }
 
 // ---- main view -----------------------------------------------------------------
@@ -112,7 +143,7 @@ function header(s: AppState): HTMLElement {
 function stat(label: string, value: string, sub?: string, title?: string): HTMLElement {
   return h(
     "div",
-    { class: "stat", ...(title ? { title } : {}) },
+    { class: "stat", ...(title ? { title, attrs: { tabindex: "0" } } : {}) },
     h("span", { class: "stat-label", text: label }),
     h("span", { class: "stat-value num", text: value }),
     sub ? h("span", { class: "stat-sub", text: sub }) : null,
@@ -141,24 +172,92 @@ function splitBar(parts: { label: string; value: number; display: string; cls: s
 
 function hero(snap: Snapshot): HTMLElement {
   const s = snap.session;
-  const started = snap.sessionStarted ? `since ${fmt.clock(snap.sessionStarted)} · ${fmt.ago(snap.sessionStarted)}` : "";
+  const meta = [`${fmt.grouped(s.requests)} requests`, snap.sessionStarted ? `since ${fmt.clock(snap.sessionStarted)}` : ""]
+    .filter(Boolean)
+    .join(" · ");
   return h(
     "section",
     { class: "card hero" },
-    h("div", { class: "eyebrow" }, "This session", h("span", { class: "muted", text: started })),
-    h("div", { class: "hero-value num", text: fmt.usd(s.totalUsd) }),
+    h(
+      "div",
+      { class: "eyebrow" },
+      "This session",
+      h("span", { class: "muted", text: meta, ...(snap.sessionStarted ? { title: `Started ${fmt.ago(snap.sessionStarted)}` } : {}) }),
+    ),
+    h(
+      "div",
+      { class: "hero-row" },
+      h(
+        "div",
+        {},
+        h("div", { class: "hero-value num", text: fmt.usd(s.totalUsd) }),
+        h("div", { class: "hero-label", text: "estimated savings" }),
+      ),
+      h(
+        "button",
+        {
+          class: "info-btn",
+          title: "How savings are calculated",
+          attrs: { type: "button", "aria-label": "How savings are calculated" },
+          onClick: () => navigate("method"),
+        },
+        icon("info", 14),
+        h("span", { text: "How?" }),
+      ),
+    ),
+    s.totalUsd > 0 ? ledger(snap) : null,
     h(
       "div",
       { class: "hero-sub" },
-      h("b", { class: "accent num", text: `${fmt.compact(s.tokensSaved)} tokens` }),
-      ` saved · ${fmt.percent(s.savingsPercent)} of input · ${fmt.grouped(s.requests)} requests`,
+      h("b", { class: "accent num", text: `${tokens(s.tokensSaved)} tokens`, ...(exactTitle(s.tokensSaved) ? { title: exactTitle(s.tokensSaved) as string } : {}) }),
+      ` compressed · ${fmt.percent(s.savingsPercent)} of input`,
     ),
-    s.totalUsd > 0
-      ? splitBar([
-          { label: "Cache", value: s.cacheUsd, display: fmt.usd(s.cacheUsd), cls: "seg-a" },
-          { label: "Compression", value: s.compressionUsd, display: fmt.usd(s.compressionUsd), cls: "seg-b" },
-        ])
+    snap.litellmPricing === false
+      ? h(
+          "button",
+          { class: "estimate-note", attrs: { type: "button" }, onClick: () => navigate("method") },
+          icon("alert", 13),
+          h("span", { text: "Rough estimate · flat $3 / 1M token pricing" }),
+        )
       : null,
+  );
+}
+
+/** Where the session's dollars come from, one line per source. */
+function ledger(snap: Snapshot): HTMLElement {
+  const s = snap.session;
+  const rows = [
+    {
+      cls: "seg-a",
+      label: "Headroom compression",
+      sub: "removed tokens × input price",
+      value: s.compressionUsd,
+    },
+    {
+      cls: "seg-b",
+      label: "Prompt cache discount",
+      sub: `${tokens(s.cacheReadTokens)} cached tokens · ${providerName(snap.cacheProvider)}`,
+      value: s.cacheUsd,
+      title: exactTitle(s.cacheReadTokens, "cached tokens"),
+    },
+  ];
+  return h(
+    "div",
+    { class: "ledger" },
+    h(
+      "div",
+      { class: "split-track", attrs: { role: "img", "aria-label": rows.map((r) => `${r.label} ${fmt.usd(r.value)}`).join(", ") } },
+      ...rows.map((r) => h("span", { class: `split-seg ${r.cls}`, style: { width: `${fmt.share(r.value, s.totalUsd)}%` } })),
+    ),
+    ...rows.map((r) =>
+      h(
+        "div",
+        { class: "ledger-row", ...(r.title ? { title: r.title } : {}) },
+        h("span", { class: `swatch ${r.cls}` }),
+        h("span", { class: "ledger-text" }, h("span", { class: "ledger-label", text: r.label }), h("span", { class: "ledger-sub", text: r.sub })),
+        h("b", { class: "num", text: fmt.usd(r.value) }),
+      ),
+    ),
   );
 }
 
@@ -168,8 +267,15 @@ function grid(snap: Snapshot): HTMLElement {
   return h(
     "section",
     { class: "grid" },
-    stat("Lifetime saved", fmt.usd(snap.lifetime.totalUsd), `${fmt.compact(snap.lifetime.tokensSaved)} tokens · ${fmt.grouped(snap.lifetime.requests)} req`),
-    stat("All layers", fmt.compact(snap.allLayersSaved), `${fmt.percent(snap.allLayersPercent)} of tokens`),
+    stat(
+      "Lifetime saved",
+      fmt.usd(snap.lifetime.totalUsd),
+      exactNumbers()
+        ? `${tokens(snap.lifetime.tokensSaved)} tokens`
+        : `${tokens(snap.lifetime.tokensSaved)} tokens · ${fmt.grouped(snap.lifetime.requests)} req`,
+      exactTitle(snap.lifetime.tokensSaved),
+    ),
+    stat("All layers", tokens(snap.allLayersSaved), `${fmt.percent(snap.allLayersPercent)} of tokens`, exactTitle(snap.allLayersSaved)),
     stat(
       "Requests",
       fmt.grouped(snap.requestsTotal),
@@ -186,8 +292,8 @@ function layers(snap: Snapshot): HTMLElement | null {
     { class: "card" },
     h("div", { class: "eyebrow" }, "Where tokens were saved", h("span", { class: "muted", text: "since proxy restart" })),
     splitBar([
-      { label: "Tool schemas", value: snap.toolSearchSaved, display: fmt.compact(snap.toolSearchSaved), cls: "seg-a" },
-      { label: "Compression", value: snap.compressionSaved, display: fmt.compact(snap.compressionSaved), cls: "seg-b" },
+      { label: "Tool schemas", value: snap.toolSearchSaved, display: tokens(snap.toolSearchSaved), cls: "seg-a" },
+      { label: "Compression", value: snap.compressionSaved, display: tokens(snap.compressionSaved), cls: "seg-b" },
     ]),
   );
 }
@@ -231,8 +337,8 @@ function footer(s: AppState): HTMLElement {
     h(
       "div",
       { class: "foot-actions" },
-      button("Open Dashboard", () => void run(api.openDashboard), { icon: "external", kind: "primary" }),
-      button("Copy Summary", () => void run(api.copySummary, "Summary copied"), { icon: "copy" }),
+      button("Open Dashboard", (b) => void run(api.openDashboard, undefined, b), { icon: "external", kind: "primary" }),
+      button("Copy Summary", (b) => void run(api.copySummary, "Summary copied", b), { icon: "copy" }),
     ),
     h("div", { class: `foot-meta${s.snapshot ? "" : " flush"}` }, h("span", { text: checked }), h("span", { text: "Unofficial companion for Headroom" })),
   );
@@ -299,6 +405,111 @@ function renderMain(s: AppState): void {
   content.scrollTop = scroll;
 }
 
+// ---- savings method view ---------------------------------------------------------
+
+const FALLBACK_RATE = 3; // USD per 1M input tokens, Headroom's price when LiteLLM is unavailable
+
+function kv(label: string, value: string, title?: string): HTMLElement {
+  return h("div", { class: "kv", ...(title ? { title } : {}) }, h("span", { text: label }), h("b", { class: "num", text: value }));
+}
+
+function methodCard(swatch: string, title: string, formula: string, body: (HTMLElement | string)[], rows: HTMLElement[]): HTMLElement {
+  return h(
+    "section",
+    { class: "card method-card" },
+    h("h2", { class: "method-title" }, h("span", { class: `swatch ${swatch}` }), title),
+    h("code", { class: "formula", text: formula }),
+    ...body.map((b) => (typeof b === "string" ? h("p", { text: b }) : b)),
+    rows.length ? h("div", { class: "kv-list" }, ...rows) : null,
+  );
+}
+
+function renderMethod(s: AppState): void {
+  const snap = s.snapshot;
+  const provider = providerName(snap?.cacheProvider ?? null);
+  const discount = snap?.cacheReadDiscount ? ` (${snap.cacheReadDiscount} off)` : "";
+  const hitRate = snap?.cacheHitRate != null ? ` ${fmt.percent(snap.cacheHitRate)} of input tokens were read from cache.` : "";
+  // In fallback mode Headroom multiplies by one flat rate; show the formula it actually used.
+  const flat = snap?.litellmPricing === false;
+  const flatRate = `$${FALLBACK_RATE.toFixed(2)} / 1M`;
+
+  const compression = methodCard(
+    "seg-a",
+    "Headroom compression",
+    flat ? `removed tokens × ${flatRate} (flat rate)` : "removed tokens × model input price",
+    ["Removed tokens are message content Headroom compressed plus tool schemas it kept out of the prompt until needed."],
+    snap
+      ? [kv("This session", fmt.usd(snap.session.compressionUsd)), kv("Lifetime", fmt.usd(snap.lifetime.compressionUsd))]
+      : [],
+  );
+
+  const cache = methodCard(
+    "seg-b",
+    "Prompt cache discount",
+    flat ? `cached tokens × ${flatRate} (flat rate)` : "cached tokens × (input price − cache-read price)",
+    [
+      `${provider} bills cached prompt tokens at a lower rate${discount}. That discount comes from the provider's caching; Headroom keeps prompts stable so more of them hit the cache.${hitRate}`,
+    ],
+    snap
+      ? [
+          kv("This session", `${tokens(snap.session.cacheReadTokens)} → ${fmt.usd(snap.session.cacheUsd)}`, exactTitle(snap.session.cacheReadTokens, "cached tokens")),
+          kv("Lifetime", `${tokens(snap.lifetime.cacheReadTokens)} → ${fmt.usd(snap.lifetime.cacheUsd)}`, exactTitle(snap.lifetime.cacheReadTokens, "cached tokens")),
+        ]
+      : [],
+  );
+
+  let prices: HTMLElement;
+  if (snap?.litellmPricing === false) {
+    const example = snap.session.cacheReadTokens;
+    prices = h(
+      "section",
+      { class: "card method-card warn" },
+      h("h2", { class: "method-title" }, icon("alert", 14), "Prices are rough estimates"),
+      h("p", {
+        text: `Headroom can't load LiteLLM's model price list, so every model is priced at a flat ${flatRate} input tokens. Cached tokens are valued at that full rate instead of only the discount, so the cache figure is likely overstated.`,
+      }),
+      example > 0
+        ? h("code", {
+            class: "formula",
+            text: `${fmt.grouped(example)} × ${flatRate} = ${fmt.usd((example * FALLBACK_RATE) / 1e6)}`,
+          })
+        : null,
+      h("p", { class: "muted", text: "Installing Headroom with LiteLLM support switches it to per-model list prices." }),
+    );
+  } else {
+    prices = h(
+      "section",
+      { class: "card method-card" },
+      h("h2", { class: "method-title", text: "Prices" }),
+      h("p", {
+        text:
+          snap?.litellmPricing === true
+            ? "Per-model list prices from LiteLLM's pricing table, input tokens only."
+            : "This Headroom version doesn't report where its prices come from.",
+      }),
+    );
+  }
+
+  const content = h(
+    "main",
+    { class: "content method" },
+    h("p", { class: "method-intro", text: "Trimbit shows Headroom's own numbers. Headroom prices each request as it passes through the proxy; nothing is added on top." }),
+    compression,
+    cache,
+    prices,
+    h("p", { class: "footnote", text: "All amounts are USD estimates of input cost avoided, not your invoice. Output tokens aren't included." }),
+  );
+
+  root.replaceChildren(
+    h(
+      "div",
+      { class: "panel" },
+      h("header", { class: "bar" }, h("div", { class: "bar-title" }, iconButton("back", "Back", () => navigate("main")), h("h1", { text: "How savings are calculated" }))),
+      content,
+    ),
+  );
+}
+
 // ---- settings view ---------------------------------------------------------------
 
 const TITLE_MODES: [TitleMode, string][] = [
@@ -309,6 +520,32 @@ const TITLE_MODES: [TitleMode, string][] = [
   ["icon_only", "Icon only"],
 ];
 const REFRESH_CHOICES = [5, 10, 30, 60];
+const NUMBER_FORMATS: (readonly [NumberFormat, string])[] = [
+  ["compact", "1.2M"],
+  ["exact", "1,234,567"],
+];
+
+function segmented<T extends string | number>(
+  label: string,
+  options: readonly (readonly [T, string])[],
+  current: T,
+  onPick: (value: T) => Promise<boolean>,
+): HTMLElement {
+  return h(
+    "div",
+    { class: "segmented", attrs: { role: "radiogroup", "aria-label": label } },
+    ...options.map(([value, text]) =>
+      h("button", {
+        text,
+        class: value === current ? "active" : "",
+        attrs: { type: "button", role: "radio", "aria-checked": String(value === current) },
+        onClick: async () => {
+          if (await onPick(value)) renderSettings(state as AppState);
+        },
+      }),
+    ),
+  );
+}
 
 async function save(patch: Partial<Settings>, launchAtLogin?: boolean): Promise<boolean> {
   if (!state) return false;
@@ -347,20 +584,17 @@ function renderSettings(s: AppState): void {
   }
   select.addEventListener("change", () => void save({ titleMode: select.value as TitleMode }));
 
-  const segmented = h(
-    "div",
-    { class: "segmented", attrs: { role: "radiogroup", "aria-label": "Refresh interval" } },
-    ...REFRESH_CHOICES.map((sec) => {
-      const b = h("button", {
-        text: `${sec}s`,
-        class: sec === s.settings.refreshSeconds ? "active" : "",
-        attrs: { type: "button", role: "radio", "aria-checked": String(sec === s.settings.refreshSeconds) },
-        onClick: async () => {
-          if (await save({ refreshSeconds: sec })) renderSettings(state as AppState);
-        },
-      });
-      return b;
-    }),
+  const refresh = segmented(
+    "Refresh interval",
+    REFRESH_CHOICES.map((sec) => [sec, `${sec}s`] as const),
+    s.settings.refreshSeconds,
+    (refreshSeconds) => save({ refreshSeconds }),
+  );
+  const numbers = segmented(
+    "Number format",
+    NUMBER_FORMATS,
+    s.settings.numberFormat,
+    (numberFormat) => save({ numberFormat }),
   );
 
   const port = h("input", {
@@ -393,7 +627,8 @@ function renderSettings(s: AppState): void {
       "div",
       { class: "group" },
       row(s.platform === "macos" ? "Menu bar shows" : "Tray shows", select, windowsNote),
-      row("Refresh every", segmented),
+      row("Numbers", numbers, exactNumbers() ? "Full token counts everywhere" : "Hover a short number for the exact count"),
+      row("Refresh every", refresh),
     ),
     h("h3", { class: "group-title", text: "Proxy" }),
     h("div", { class: "group" }, row("Port", port, `Headroom proxy on ${s.settings.host}`)),
@@ -437,6 +672,7 @@ function render(): void {
   document.documentElement.dataset.platform = state.platform;
   document.documentElement.dataset.material = state.material;
   if (view === "settings") renderSettings(state);
+  else if (view === "method") renderMethod(state);
   else renderMain(state);
 }
 
@@ -448,7 +684,7 @@ function navigate(next: View): void {
 function onKey(e: KeyboardEvent): void {
   const mod = e.metaKey || e.ctrlKey;
   if (e.key === "Escape") {
-    if (view === "settings") navigate("main");
+    if (view !== "main") navigate("main");
     else void api.hidePanel();
   } else if (mod && e.key.toLowerCase() === "r") {
     e.preventDefault();
@@ -469,7 +705,7 @@ async function main(): Promise<void> {
   await events.onState((next) => {
     state = next;
     // Settings are form state; don't rebuild them under the user's cursor.
-    if (view === "main") render();
+    if (view !== "settings") render();
   });
   await events.onNavigate((next) => navigate(next === "settings" ? "settings" : "main"));
   await events.onShown(() => {

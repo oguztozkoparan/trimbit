@@ -12,8 +12,8 @@ const now = Date.now();
 const iso = (msAgo: number) => new Date(now - msAgo).toISOString();
 
 const snapshot: Snapshot = {
-  session: { requests: 60, tokensSaved: 1_054_759, compressionUsd: 12.72, cacheUsd: 91.13, totalUsd: 103.85, inputCostUsd: 99.23, savingsPercent: 3.37 },
-  lifetime: { requests: 178, tokensSaved: 2_352_186, compressionUsd: 32.22, cacheUsd: 245.38, totalUsd: 277.6, inputCostUsd: 301.96, savingsPercent: null },
+  session: { requests: 60, tokensSaved: 1_054_759, compressionUsd: 12.72, cacheUsd: 91.13, cacheReadTokens: 30_378_118, totalUsd: 103.85, inputCostUsd: 99.23, savingsPercent: 3.37 },
+  lifetime: { requests: 178, tokensSaved: 2_352_186, compressionUsd: 32.22, cacheUsd: 245.38, cacheReadTokens: 81_792_417, totalUsd: 277.6, inputCostUsd: 301.96, savingsPercent: null },
   sessionStarted: iso(21 * 60_000),
   sessionLastActivity: iso(20_000),
   allLayersSaved: 10_647_961,
@@ -36,13 +36,17 @@ const snapshot: Snapshot = {
     { name: "claude-sonnet-5", requests: 57 },
     { name: "claude-opus-5-5", requests: 45 },
   ],
+  litellmPricing: params.get("pricing") === "litellm" ? true : false,
+  cacheProvider: "anthropic",
+  cacheHitRate: 90.9,
+  cacheReadDiscount: "90%",
 };
 
 const state: AppState = {
   status: scenario === "stale" ? "offline" : (scenario as AppState["status"]),
   error: scenario === "offline" || scenario === "stale" ? "proxy is not reachable: error sending request (connection refused)" : null,
   snapshot: scenario === "offline" || scenario === "connecting" ? null : snapshot,
-  settings: { host: "127.0.0.1", port: 8787, refreshSeconds: 10, titleMode: "session_tokens", notifyStatusChanges: true },
+  settings: { host: "127.0.0.1", port: 8787, refreshSeconds: 10, titleMode: "session_tokens", numberFormat: (params.get("numbers") as "compact" | "exact" | null) ?? "compact", notifyStatusChanges: true },
   baseUrl: "http://127.0.0.1:8787",
   lastChecked: iso(4_000),
   lastSuccess: iso(scenario === "stale" ? 6 * 60_000 : 4_000),
@@ -76,6 +80,9 @@ mockIPC((cmd, args) => {
 
 await import("../src/main");
 
+if (params.get("view") === "method") {
+  document.querySelector<HTMLButtonElement>(".info-btn")?.click();
+}
 if (params.get("view") === "settings") {
   // Same path the backend uses: emit a `navigate` event to the registered listener.
   const cb = (window as unknown as Record<string, (e: unknown) => void>)[`_${navigateHandler}`];

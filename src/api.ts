@@ -6,12 +6,14 @@ import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 
 export type Status = "connecting" | "online" | "degraded" | "offline";
 export type TitleMode = "session_tokens" | "session_usd" | "lifetime_tokens" | "lifetime_usd" | "icon_only";
+export type NumberFormat = "compact" | "exact";
 
 export interface Savings {
   requests: number;
   tokensSaved: number;
   compressionUsd: number;
   cacheUsd: number;
+  cacheReadTokens: number;
   totalUsd: number;
   inputCostUsd: number;
   savingsPercent: number | null;
@@ -43,6 +45,11 @@ export interface Snapshot {
   healthy: boolean;
   uptimeSeconds: number | null;
   models: ModelCount[];
+  /** false: Headroom prices every model at a flat fallback rate. */
+  litellmPricing: boolean | null;
+  cacheProvider: string | null;
+  cacheHitRate: number | null;
+  cacheReadDiscount: string | null;
 }
 
 export interface Settings {
@@ -50,6 +57,7 @@ export interface Settings {
   port: number;
   refreshSeconds: number;
   titleMode: TitleMode;
+  numberFormat: NumberFormat;
   notifyStatusChanges: boolean;
 }
 

@@ -52,6 +52,7 @@ pub struct Savings {
     pub tokens_saved: u64,
     pub compression_usd: f64,
     pub cache_usd: f64,
+    pub cache_read_tokens: u64,
     pub total_usd: f64,
     pub input_cost_usd: f64,
     pub savings_percent: Option<f64>,
@@ -87,6 +88,11 @@ pub struct Snapshot {
     pub healthy: bool,
     pub uptime_seconds: Option<f64>,
     pub models: Vec<ModelCount>,
+    /// Whether Headroom prices per model via LiteLLM; `false` means a flat fallback rate.
+    pub litellm_pricing: Option<bool>,
+    pub cache_provider: Option<String>,
+    pub cache_hit_rate: Option<f64>,
+    pub cache_read_discount: Option<String>,
 }
 
 // ---- tolerant JSON accessors ------------------------------------------------
@@ -150,6 +156,7 @@ fn savings(block: &Value) -> Savings {
         tokens_saved: count(block, &["tokens_saved"]),
         compression_usd,
         cache_usd,
+        cache_read_tokens: count(block, &["cache_read_tokens"]),
         total_usd: compression_usd + cache_usd,
         input_cost_usd: money(block, &["total_input_cost_usd"]),
         savings_percent: num(block, &["savings_percent"]),
@@ -183,6 +190,11 @@ pub fn parse(stats: &Value, health: Option<&Value>) -> Snapshot {
     models.sort_by(|a, b| b.requests.cmp(&a.requests).then_with(|| a.name.cmp(&b.name)));
     models.truncate(MAX_MODELS);
 
+    // The provider carrying most requests describes the cache discount shown in the UI.
+    let cache = dig(stats, &["prefix_cache", "by_provider"])
+        .and_then(Value::as_object)
+        .and_then(|map| map.iter().max_by_key(|(_, v)| count(v, &["requests"])));
+
     Snapshot {
         session: savings(session),
         lifetime: savings(lifetime),
@@ -204,6 +216,10 @@ pub fn parse(stats: &Value, health: Option<&Value>) -> Snapshot {
         healthy: dig(health, &["status"]).and_then(Value::as_str).is_none_or(|s| s == "healthy"),
         uptime_seconds: num(health, &["uptime_seconds"]).filter(|n| *n >= 0.0),
         models,
+        litellm_pricing: dig(stats, &["litellm_available"]).and_then(Value::as_bool),
+        cache_provider: cache.and_then(|(name, _)| sanitize_text(name)),
+        cache_hit_rate: cache.and_then(|(_, v)| num(v, &["hit_rate"])).filter(|n| (0.0..=100.0).contains(n)),
+        cache_read_discount: cache.and_then(|(_, v)| text(v, &["read_discount"])),
     }
 }
 
@@ -282,11 +298,17 @@ mod tests {
             "savings": {"by_layer": {"tool_search": {"tokens": 7_788_192}}},
             "latency": {"average_ms": 15594.34},
             "display_session": {"requests": 52, "tokens_saved": 1_032_860, "compression_savings_usd": 11.34,
-                                "cache_savings_usd": 84.13, "total_input_cost_usd": 91.8, "savings_percent": 3.59,
+                                "cache_savings_usd": 84.13, "cache_read_tokens": 28_042_009,
+                                "total_input_cost_usd": 91.8, "savings_percent": 3.59,
                                 "started_at": "2026-09-23T16:56:49Z"},
             "persistent_savings": {"lifetime": {"requests": 178, "tokens_saved": 2_352_186,
                                                 "compression_savings_usd": 32.2, "cache_savings_usd": 245.4}},
-            "subscription_window": {"latest": {"token_prefix": "sk-ant-o"}}
+            "subscription_window": {"latest": {"token_prefix": "sk-ant-o"}},
+            "litellm_available": false,
+            "prefix_cache": {"by_provider": {
+                "anthropic": {"requests": 726, "hit_rate": 90.9, "read_discount": "90%"},
+                "openai": {"requests": 3, "hit_rate": 10.0}
+            }}
         })
     }
 
@@ -319,6 +341,11 @@ mod tests {
         assert_eq!(s.models[0].name, "claude-fable-5-1");
         assert_eq!(s.version.as_deref(), Some("0.37.0"));
         assert!(s.healthy);
+        assert_eq!(s.session.cache_read_tokens, 28_042_009);
+        assert_eq!(s.litellm_pricing, Some(false));
+        assert_eq!(s.cache_provider.as_deref(), Some("anthropic"));
+        assert_eq!(s.cache_hit_rate, Some(90.9));
+        assert_eq!(s.cache_read_discount.as_deref(), Some("90%"));
     }
 
     #[test]

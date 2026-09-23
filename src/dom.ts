@@ -49,6 +49,7 @@ const ICONS = {
   bolt: ["M13 3L5 14h6l-1 7 8-11h-6z"],
   alert: ["M12 4l9 16H3z", "M12 10v4", "M12 17.5v.01"],
   check: ["M5 12.5l4.5 4.5L19 7.5"],
+  info: ["M12 3a9 9 0 1 0 0 18a9 9 0 1 0 0-18z", "M12 11v5", "M12 7.5v.01"],
 } as const;
 
 export type IconName = keyof typeof ICONS;

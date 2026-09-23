@@ -948,6 +948,221 @@ summary:focus-visible {
   color: var(--coral);
 }
 
+/* ---- savings ledger (hero) ---- */
+
+.hero-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.hero-label {
+  font-size: 11.5px;
+  color: var(--text-3);
+  margin-top: 1px;
+}
+
+.info-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 24px;
+  padding: 0 9px;
+  border: 1px solid var(--border);
+  border-radius: var(--control-radius);
+  background: var(--surface);
+  color: var(--text-2);
+  font: inherit;
+  font-size: 11.5px;
+  font-weight: 550;
+  cursor: pointer;
+}
+
+.ledger {
+  margin-top: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.ledger .split-track {
+  margin-bottom: 2px;
+}
+
+.ledger-row {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+}
+
+.ledger-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.ledger-label {
+  color: var(--text);
+  font-weight: 550;
+}
+
+.ledger-sub {
+  font-size: 11px;
+  color: var(--text-3);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.ledger-row b {
+  font-weight: 650;
+}
+
+.hero .hero-sub {
+  margin-top: 10px;
+}
+
+.estimate-note {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  margin-top: 10px;
+  padding: 6px 9px;
+  border: 1px solid rgba(255, 181, 71, 0.3);
+  border-radius: var(--field-radius);
+  background: rgba(255, 181, 71, 0.1);
+  color: var(--text-2);
+  font: inherit;
+  font-size: 11.5px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.estimate-note .icon {
+  color: var(--amber);
+}
+
+/* ---- savings method view ---- */
+
+.method-intro,
+.footnote {
+  margin: 0 2px;
+  font-size: 12px;
+  color: var(--text-2);
+  line-height: 1.5;
+}
+
+.footnote {
+  font-size: 11px;
+  color: var(--text-3);
+}
+
+.method-card p {
+  margin: 8px 0 0;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--text-2);
+}
+
+.method-title {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin: 0 0 8px;
+  font-size: 13px;
+  font-weight: 650;
+}
+
+.formula {
+  display: block;
+  padding: 7px 9px;
+  border-radius: 6px;
+  font-size: 11.5px;
+  line-height: 1.45;
+  white-space: normal;
+}
+
+.method-card.warn {
+  background: rgba(255, 181, 71, 0.08);
+  border-color: rgba(255, 181, 71, 0.28);
+}
+
+.method-card.warn .method-title .icon {
+  color: var(--amber);
+}
+
+.kv-list {
+  margin-top: 10px;
+  border-top: 1px solid var(--border);
+}
+
+.kv {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding-top: 7px;
+  font-size: 12px;
+  color: var(--text-2);
+}
+
+.kv b {
+  color: var(--text);
+  font-weight: 650;
+}
+
+.bar-title h1 {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ---- interaction states ---- */
+
+.btn,
+.icon-btn,
+.info-btn,
+.estimate-note,
+.segmented button,
+.link {
+  transition:
+    background-color 150ms ease,
+    color 150ms ease,
+    border-color 150ms ease,
+    filter 150ms ease;
+}
+
+.info-btn:hover,
+.estimate-note:hover {
+  background: var(--surface-hover);
+  color: var(--text);
+}
+
+.btn:active,
+.icon-btn:active,
+.info-btn:active,
+.segmented button:active {
+  filter: brightness(0.92);
+}
+
+.btn:disabled {
+  cursor: default;
+  opacity: 0.6;
+}
+
+.stat[title] {
+  cursor: help;
+}
+
+.stat:focus-visible,
+.ledger-row:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
 /* ---- motion ---- */
 
 @keyframes spin {

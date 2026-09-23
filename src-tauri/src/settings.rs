@@ -22,6 +22,14 @@ pub enum TitleMode {
     IconOnly,
 }
 
+/// How token counts are shown: `1.1M` or `1,054,759`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum NumberFormat {
+    Compact,
+    Exact,
+}
+
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase", default, deny_unknown_fields)]
 pub struct Settings {
@@ -29,6 +37,7 @@ pub struct Settings {
     pub port: u16,
     pub refresh_seconds: u64,
     pub title_mode: TitleMode,
+    pub number_format: NumberFormat,
     pub notify_status_changes: bool,
 }
 
@@ -44,6 +53,7 @@ impl Default for Settings {
             port,
             refresh_seconds: DEFAULT_REFRESH,
             title_mode: TitleMode::SessionTokens,
+            number_format: NumberFormat::Compact,
             notify_status_changes: true,
         }
     }
@@ -135,7 +145,13 @@ mod tests {
     fn roundtrip() {
         let dir = tempfile::tempdir().unwrap();
         let path = dir.path().join("nested").join("settings.json");
-        let s = Settings { port: 9000, refresh_seconds: 30, title_mode: TitleMode::SessionUsd, ..Settings::default() };
+        let s = Settings {
+            port: 9000,
+            refresh_seconds: 30,
+            title_mode: TitleMode::SessionUsd,
+            number_format: NumberFormat::Exact,
+            ..Settings::default()
+        };
         s.save(&path).unwrap();
         assert_eq!(Settings::load(&path), s);
         assert!(!path.with_extension("json.tmp").exists());

@@ -23,6 +23,14 @@ pub fn compact(n: u64) -> String {
     }
 }
 
+/// Token counts in the user's chosen format.
+pub fn tokens(n: u64, format: crate::settings::NumberFormat) -> String {
+    match format {
+        crate::settings::NumberFormat::Compact => compact(n),
+        crate::settings::NumberFormat::Exact => grouped(n),
+    }
+}
+
 /// 10112582 → "10,112,582".
 pub fn grouped(n: u64) -> String {
     let digits = n.to_string();
@@ -81,5 +89,12 @@ mod tests {
         assert_eq!(usd(f64::NAN), "–");
         assert_eq!(percent(Some(3.587)), "3.6%");
         assert_eq!(percent(None), "–");
+    }
+
+    #[test]
+    fn token_formats() {
+        use crate::settings::NumberFormat;
+        assert_eq!(tokens(1_054_759, NumberFormat::Compact), "1.1M");
+        assert_eq!(tokens(1_054_759, NumberFormat::Exact), "1,054,759");
     }
 }

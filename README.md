@@ -11,14 +11,17 @@ Live token and cost savings from your local Headroom proxy, on macOS, Windows an
 <p align="center">
   <img src="docs/screenshots/panel-online.png" width="260" alt="Session savings panel">
   <img src="docs/screenshots/panel-offline.png" width="260" alt="Proxy offline state">
-  <img src="docs/screenshots/panel-settings.png" width="260" alt="Settings">
+  <img src="docs/screenshots/panel-method.png" width="260" alt="How savings are calculated">
 </p>
 
 ## Features
 
 - **Savings at a glance**: the tray shows session tokens or dollars saved (your choice), or just the icon.
 - **Panel**: click the tray icon to open it.
-  - This session: money saved, with a cache vs. compression split, plus tokens saved and savings %.
+  - This session: estimated savings split into Headroom compression and the provider's prompt-cache discount,
+    plus tokens compressed and savings %.
+  - **How savings are calculated**: the formula behind each dollar figure, the pricing source, and a clear
+    warning when Headroom is falling back to a flat rate.
   - Lifetime savings and all-layer token savings.
   - Requests and cache hit rate, average latency, and where the tokens were saved (tool schemas vs. compression).
   - Top models, plus Headroom's own optimization tips.
@@ -26,7 +29,9 @@ Live token and cost savings from your local Headroom proxy, on macOS, Windows an
   known data stays visible and is clearly marked as stale.
 - **Notifications** when the proxy goes down or comes back.
 - **Quick actions**: open the Headroom dashboard, copy a plain-text summary, refresh (⌘/Ctrl+R).
-- **Settings**: tray display, refresh interval (5 to 60 s), proxy port, notifications, launch at login.
+- **Exact or short numbers**: `1.1M` or `1,054,759`. In short mode, hover any count to see the exact value.
+- **Settings**: tray display, number format, refresh interval (5 to 60 s), proxy port, notifications, launch at
+  login.
 - **Native look**: Liquid Glass on macOS 26+ (vibrancy on older macOS), Fluent Acrylic on Windows and an
   opaque panel on Linux, with corner and control shapes that follow each platform.
 - Light and dark themes, keyboard navigation and reduced-motion support.
