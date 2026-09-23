@@ -32,7 +32,14 @@
   },
   "bundle": {
     "active": true,
-    "targets": "all",
+    "targets": [
+      "app",
+      "dmg",
+      "nsis",
+      "deb",
+      "rpm",
+      "appimage"
+    ],
     "category": "DeveloperTool",
     "shortDescription": "Headroom savings in your menu bar",
     "longDescription": "Trimbit is an unofficial menu bar companion for the Headroom proxy. It shows live token and cost savings, proxy health and request stats. Not affiliated with the Headroom project.",

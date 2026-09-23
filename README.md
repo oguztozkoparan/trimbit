@@ -69,7 +69,7 @@ Prebuilt installers will be attached to [Releases](../../releases) when a versio
 | Platform | File |
 |---|---|
 | macOS (Apple silicon / Intel) | `Trimbit_<version>_aarch64.dmg` / `Trimbit_<version>_x64.dmg` |
-| Windows 10 (1809+) / 11 | `Trimbit_<version>_x64-setup.exe` or `.msi` |
+| Windows 10 (1809+) / 11 | `Trimbit_<version>_x64-setup.exe` |
 | Linux | `.AppImage`, `.deb` or `.rpm` |
 
 Until then, [build from source](#development). `npm run app:build` produces the installer for your OS in
