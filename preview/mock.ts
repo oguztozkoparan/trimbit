@@ -40,20 +40,22 @@ const snapshot: Snapshot = {
   cacheProvider: "anthropic",
   cacheHitRate: 90.9,
   cacheReadDiscount: "90%",
+  recognized: params.get("format") !== "unknown",
 };
 
 const state: AppState = {
-  status: scenario === "stale" ? "offline" : (scenario as AppState["status"]),
-  error: scenario === "offline" || scenario === "stale" ? "proxy is not reachable: error sending request (connection refused)" : null,
-  snapshot: scenario === "offline" || scenario === "connecting" ? null : snapshot,
-  settings: { host: "127.0.0.1", port: 8787, refreshSeconds: 10, titleMode: "session_tokens", numberFormat: (params.get("numbers") as "compact" | "exact" | null) ?? "compact", notifyStatusChanges: true },
+  status: scenario === "stale" || scenario === "welcome" ? "offline" : (scenario as AppState["status"]),
+  error: scenario === "offline" || scenario === "stale" || scenario === "welcome" ? "proxy is not reachable: error sending request (connection refused)" : null,
+  snapshot: scenario === "offline" || scenario === "connecting" || scenario === "welcome" ? null : snapshot,
+  settings: { host: "127.0.0.1", port: 8787, refreshSeconds: 10, titleMode: "session_tokens", numberFormat: (params.get("numbers") as "compact" | "exact" | null) ?? "compact", notifyStatusChanges: true, checkUpdates: true },
   baseUrl: "http://127.0.0.1:8787",
   lastChecked: iso(4_000),
-  lastSuccess: iso(scenario === "stale" ? 6 * 60_000 : 4_000),
+  lastSuccess: scenario === "welcome" ? null : iso(scenario === "stale" ? 6 * 60_000 : 4_000),
   launchAtLogin: false,
   appVersion: "2.0.0",
   platform: params.get("platform") ?? "macos",
   material: (params.get("material") as AppState["material"] | null) ?? "solid",
+  update: params.get("update") ? { state: "available", version: params.get("update") as string } : { state: "idle" },
 };
 
 let navigateHandler: number | undefined;

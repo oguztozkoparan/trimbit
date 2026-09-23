@@ -13,10 +13,11 @@ other hosts, run code, or leak data, even when the proxy or the settings file is
 
 | Input | Trust | Controls |
 |---|---|---|
+| Update feed (GitHub Releases) | Untrusted until verified | Fetched from a fixed HTTPS URL on github.com, once a day and on demand; can be turned off. The downloaded bundle is installed only if its minisign signature verifies against the public key compiled into the app. The private key lives in repository secrets. |
 | Proxy HTTP responses | Untrusted | Only loopback hosts are allowed, and the check runs before any connection. No redirects and no system proxy. 4 s timeout, 2 MB body cap. JSON is parsed tolerantly into a fixed schema, so unknown fields are dropped. Strings are stripped of control and bidi-override characters and capped at 200 characters. |
 | Settings file on disk | Untrusted | Parsed with `deny_unknown_fields`. Non-loopback hosts, zero ports and unsupported intervals fall back to defaults. A corrupt file is moved aside, never deleted. |
 | Settings changes from the UI | Validated | Same validation, but invalid values are rejected with an error instead of being replaced. Nothing is saved or applied unless every field is valid. |
-| Web UI | Sandboxed | It can call only the 8 app commands listed in `src-tauri/build.rs` and `capabilities/panel.json`. No filesystem, shell, HTTP or window APIs. CSP is `default-src 'none'` with only same-origin scripts and styles, and the prototype is frozen. All text is inserted with `textContent`, never `innerHTML`. |
+| Web UI | Sandboxed | It can call only the 11 app commands listed in `src-tauri/build.rs` and `capabilities/panel.json`. No filesystem, shell, HTTP or window APIs. CSP is `default-src 'none'` with only same-origin scripts and styles, and the prototype is frozen. All text is inserted with `textContent`, never `innerHTML`. |
 
 ### Sensitive data
 

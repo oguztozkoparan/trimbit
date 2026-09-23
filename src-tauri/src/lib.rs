@@ -7,6 +7,7 @@ mod proxy;
 mod settings;
 mod state;
 mod tray;
+mod updates;
 
 use std::sync::Arc;
 use std::time::Duration;
@@ -55,6 +56,29 @@ fn open_logs(app: AppHandle) -> Result<(), String> {
 #[tauri::command]
 fn hide_panel(app: AppHandle) {
     tray::hide_panel(&app);
+}
+
+#[tauri::command]
+async fn check_for_updates(app: AppHandle) {
+    updates::check(&app, true).await;
+}
+
+#[tauri::command]
+async fn install_update(app: AppHandle) {
+    updates::install(&app).await;
+}
+
+/// Copies one of the fixed setup commands shown on the first-run screen. The UI picks
+/// which one; it can't put arbitrary text on the clipboard.
+#[tauri::command]
+fn copy_setup_command(app: AppHandle, step: String) -> Result<(), String> {
+    use tauri_plugin_clipboard_manager::ClipboardExt as _;
+    let text = match step.as_str() {
+        "install" => r#"pip install "headroom-ai[proxy]""#,
+        "run" => "headroom proxy",
+        _ => return Err("Unknown setup step.".into()),
+    };
+    app.clipboard().write_text(text).map_err(|e| e.to_string())
 }
 
 #[tauri::command]
@@ -166,6 +190,7 @@ pub fn run() {
         .plugin(tauri_plugin_clipboard_manager::init())
         .plugin(tauri_plugin_notification::init())
         .plugin(tauri_plugin_opener::init())
+        .plugin(tauri_plugin_updater::Builder::new().build())
         .invoke_handler(tauri::generate_handler![
             get_state,
             refresh,
@@ -174,6 +199,9 @@ pub fn run() {
             copy_summary,
             open_logs,
             hide_panel,
+            check_for_updates,
+            install_update,
+            copy_setup_command,
             quit
         ])
         .setup(|app| {
@@ -185,6 +213,7 @@ pub fn run() {
             let client = proxy::Client::new()?;
             let state = Arc::new(AppState::new(settings, client, settings_path));
             app.manage(state.clone());
+            app.manage(updates::Pending::default());
 
             let panel = build_panel(app.handle())?;
             material::apply(&panel);
@@ -199,6 +228,7 @@ pub fn run() {
 
             log::info!("Trimbit {} starting", env!("CARGO_PKG_VERSION"));
             tauri::async_runtime::spawn(poll_loop(app.handle().clone(), state));
+            tauri::async_runtime::spawn(updates::check_loop(app.handle().clone()));
             Ok(())
         })
         .run(tauri::generate_context!());

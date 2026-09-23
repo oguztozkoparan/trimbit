@@ -9,6 +9,9 @@ fn main() {
         "copy_summary",
         "open_logs",
         "hide_panel",
+        "check_for_updates",
+        "install_update",
+        "copy_setup_command",
         "quit",
     ])))
     .unwrap_or_else(|err| {

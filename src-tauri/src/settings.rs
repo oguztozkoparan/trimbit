@@ -39,6 +39,7 @@ pub struct Settings {
     pub title_mode: TitleMode,
     pub number_format: NumberFormat,
     pub notify_status_changes: bool,
+    pub check_updates: bool,
 }
 
 impl Default for Settings {
@@ -55,6 +56,7 @@ impl Default for Settings {
             title_mode: TitleMode::SessionTokens,
             number_format: NumberFormat::Compact,
             notify_status_changes: true,
+            check_updates: true,
         }
     }
 }

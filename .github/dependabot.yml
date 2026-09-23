@@ -1,20 +1,24 @@
 version: 2
+# Monthly, one grouped PR per ecosystem, to keep maintenance to a few minutes a month.
 updates:
   - package-ecosystem: cargo
     directory: /src-tauri
     schedule:
-      interval: weekly
+      interval: monthly
     groups:
-      tauri:
-        patterns: ["tauri*"]
+      all:
+        patterns: ["*"]
   - package-ecosystem: npm
     directory: /
     schedule:
-      interval: weekly
+      interval: monthly
     groups:
-      tauri:
-        patterns: ["@tauri-apps/*"]
+      all:
+        patterns: ["*"]
   - package-ecosystem: github-actions
     directory: /
     schedule:
-      interval: weekly
+      interval: monthly
+    groups:
+      all:
+        patterns: ["*"]

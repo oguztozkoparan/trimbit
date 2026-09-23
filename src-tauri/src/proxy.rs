@@ -93,6 +93,8 @@ pub struct Snapshot {
     pub cache_provider: Option<String>,
     pub cache_hit_rate: Option<f64>,
     pub cache_read_discount: Option<String>,
+    /// `false` when `/stats` lacks the blocks Trimbit reads, i.e. a Headroom format it doesn't know.
+    pub recognized: bool,
 }
 
 // ---- tolerant JSON accessors ------------------------------------------------
@@ -220,6 +222,8 @@ pub fn parse(stats: &Value, health: Option<&Value>) -> Snapshot {
         cache_provider: cache.and_then(|(name, _)| sanitize_text(name)),
         cache_hit_rate: cache.and_then(|(_, v)| num(v, &["hit_rate"])).filter(|n| (0.0..=100.0).contains(n)),
         cache_read_discount: cache.and_then(|(_, v)| text(v, &["read_discount"])),
+        recognized: dig(stats, &["tokens"]).is_some_and(Value::is_object)
+            && (dig(stats, &["display_session"]).is_some() || dig(stats, &["persistent_savings"]).is_some()),
     }
 }
 
@@ -231,6 +235,8 @@ pub struct Client {
 
 impl Client {
     pub fn new() -> Result<Self, ProxyError> {
+        // Same provider the updater installs; `Err` only means one is already set.
+        let _ = rustls::crypto::ring::default_provider().install_default();
         let http = reqwest::Client::builder()
             .timeout(REQUEST_TIMEOUT)
             .connect_timeout(CONNECT_TIMEOUT)
@@ -346,6 +352,7 @@ mod tests {
         assert_eq!(s.cache_provider.as_deref(), Some("anthropic"));
         assert_eq!(s.cache_hit_rate, Some(90.9));
         assert_eq!(s.cache_read_discount.as_deref(), Some("90%"));
+        assert!(s.recognized);
     }
 
     #[test]
@@ -367,6 +374,7 @@ mod tests {
         assert_eq!(s.avg_latency_ms, None);
         assert!(!s.healthy);
         assert_eq!(parse(&json!([]), None), Snapshot { healthy: true, ..Snapshot::default() });
+        assert!(!s.recognized);
     }
 
     #[test]

@@ -69,11 +69,13 @@ function statusPill(s: AppState): HTMLElement {
     s.status === "offline"
       ? (s.error ?? "Proxy unreachable")
       : `Proxy at ${s.baseUrl}${uptime != null ? ` · up ${fmt.duration(uptime)}` : ""}`;
+  // Before the first successful connection "Offline" reads like a fault; the welcome screen explains.
+  const waiting = s.status === "offline" && !s.lastSuccess;
   return h(
     "span",
-    { class: `pill pill-${s.status}`, title, attrs: { role: "status" } },
+    { class: `pill pill-${waiting ? "connecting" : s.status}`, title, attrs: { role: "status" } },
     h("span", { class: "dot" }),
-    `${labels[s.status]}${version}`,
+    waiting ? "Waiting for Headroom" : `${labels[s.status]}${version}`,
   );
 }
 
@@ -341,6 +343,55 @@ function footer(s: AppState): HTMLElement {
   );
 }
 
+/** A copyable setup command. The backend owns the text; the UI only names the step. */
+function command(step: "install" | "run", text: string): HTMLElement {
+  return h(
+    "div",
+    { class: "command" },
+    h("code", { text }),
+    h(
+      "button",
+      {
+        class: "icon-btn",
+        title: "Copy",
+        attrs: { type: "button", "aria-label": `Copy ${text}` },
+        onClick: () => void run(() => api.copySetupCommand(step), "Copied"),
+      },
+      icon("copy", 14),
+    ),
+  );
+}
+
+/** Shown until Trimbit has reached a proxy once: explains what it needs instead of an error. */
+function welcome(s: AppState): HTMLElement {
+  return h(
+    "section",
+    { class: "welcome" },
+    h("div", { class: "welcome-mark" }, themedImg(markOnDark, markOnLight, "", "brand-mark")),
+    h("h2", { text: "Welcome to Trimbit" }),
+    h("p", { text: "Trimbit shows how many tokens the Headroom proxy saves you. Start Headroom and Trimbit connects on its own." }),
+    h(
+      "ol",
+      { class: "setup" },
+      h("li", {}, h("span", { class: "setup-title", text: "Install Headroom" }), command("install", 'pip install "headroom-ai[proxy]"')),
+      h("li", {}, h("span", { class: "setup-title", text: "Start the proxy" }), command("run", "headroom proxy")),
+      h(
+        "li",
+        {},
+        h("span", { class: "setup-title", text: "Point your tools at it" }),
+        h("span", { class: "setup-hint" }, "For Claude Code: ", h("code", { text: `ANTHROPIC_BASE_URL=${s.baseUrl || "http://127.0.0.1:8787"}` })),
+      ),
+    ),
+    h(
+      "div",
+      { class: "empty-actions" },
+      button("Check Again", (b) => void run(api.refresh, undefined, b), { icon: "refresh", kind: "primary" }),
+      button("Settings", () => navigate("settings"), { icon: "settings" }),
+    ),
+    h("p", { class: "muted small", text: `Looking for Headroom on port ${s.settings.port}.` }),
+  );
+}
+
 function offline(s: AppState): HTMLElement {
   return h(
     "section",
@@ -376,8 +427,18 @@ function renderMain(s: AppState): void {
   if (s.status === "connecting" && !snap) {
     content.appendChild(connecting());
   } else if (!snap) {
-    content.appendChild(offline(s));
+    content.appendChild(s.lastSuccess ? offline(s) : welcome(s));
   } else {
+    if (!snap.recognized) {
+      content.appendChild(
+        h(
+          "div",
+          { class: "banner banner-degraded", attrs: { role: "status" } },
+          icon("alert", 14),
+          h("span", { text: "This Headroom version reports stats Trimbit doesn't recognise, so some numbers may be missing. An update to Trimbit will likely fix it." }),
+        ),
+      );
+    }
     if (s.status === "offline") {
       content.appendChild(
         h(
@@ -397,9 +458,58 @@ function renderMain(s: AppState): void {
     if (s.status === "offline") content.classList.add("stale");
   }
 
+  const banner = updateBanner(s);
+  if (banner) content.prepend(banner);
+
   const scroll = root.querySelector(".content")?.scrollTop ?? 0;
   root.replaceChildren(h("div", { class: "panel" }, header(s), content, footer(s)));
   content.scrollTop = scroll;
+}
+
+// ---- updates -----------------------------------------------------------------------
+
+function updateBanner(s: AppState): HTMLElement | null {
+  const u = s.update;
+  if (u.state === "available") {
+    return h(
+      "div",
+      { class: "banner banner-update", attrs: { role: "status" } },
+      icon("download", 14),
+      h("span", { text: `Trimbit ${u.version} is available.` }),
+      h("button", { class: "link", text: "Install & Restart", attrs: { type: "button" }, onClick: () => void run(api.installUpdate) }),
+    );
+  }
+  if (u.state === "installing") {
+    return h(
+      "div",
+      { class: "banner banner-update", attrs: { role: "status", "aria-busy": "true" } },
+      icon("download", 14),
+      h("span", { text: `Installing Trimbit ${u.version}… it will restart when done.` }),
+    );
+  }
+  return null;
+}
+
+function updateRow(s: AppState): HTMLElement {
+  const u = s.update;
+  const hint =
+    u.state === "available"
+      ? `Version ${u.version} is ready to install`
+      : u.state === "installing"
+        ? `Installing ${u.version}…`
+        : u.state === "checking"
+          ? "Checking…"
+          : u.state === "upToDate"
+            ? `You're on the latest version (${s.appVersion})`
+            : u.state === "failed"
+              ? u.message
+              : `Version ${s.appVersion} · checks daily`;
+  const action =
+    u.state === "available"
+      ? button("Install", (b) => void run(api.installUpdate, undefined, b), { icon: "download", kind: "small primary" })
+      : button("Check Now", (b) => void run(api.checkForUpdates, undefined, b), { icon: "refresh", kind: "small" });
+  if (u.state === "checking" || u.state === "installing") action.disabled = true;
+  return row("Updates", action, hint);
 }
 
 // ---- savings method view ---------------------------------------------------------
@@ -516,9 +626,9 @@ function renderMethod(s: AppState): void {
 // ---- settings view ---------------------------------------------------------------
 
 const TITLE_MODES: [TitleMode, string][] = [
-  ["session_tokens", "Session tokens removed"],
+  ["session_tokens", "Session tokens"],
   ["session_usd", "Session value (est.)"],
-  ["lifetime_tokens", "Lifetime tokens removed"],
+  ["lifetime_tokens", "Lifetime tokens"],
   ["lifetime_usd", "Lifetime value (est.)"],
   ["icon_only", "Icon only"],
 ];
@@ -641,6 +751,8 @@ function renderSettings(s: AppState): void {
       { class: "group" },
       row("Notify when proxy goes down or up", toggle("Notifications", s.settings.notifyStatusChanges, (v) => void save({ notifyStatusChanges: v }))),
       row("Launch at login", toggle("Launch at login", s.launchAtLogin, (v) => void save({}, v))),
+      row("Check for updates automatically", toggle("Automatic update checks", s.settings.checkUpdates, (v) => void save({ checkUpdates: v }))),
+      updateRow(s),
       row("Logs", button("Open Folder", () => void run(api.openLogs), { icon: "folder", kind: "small" })),
     ),
     h(

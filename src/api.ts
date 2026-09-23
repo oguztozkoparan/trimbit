@@ -50,6 +50,8 @@ export interface Snapshot {
   cacheProvider: string | null;
   cacheHitRate: number | null;
   cacheReadDiscount: string | null;
+  /** false: a /stats format Trimbit doesn't recognise. */
+  recognized: boolean;
 }
 
 export interface Settings {
@@ -59,7 +61,16 @@ export interface Settings {
   titleMode: TitleMode;
   numberFormat: NumberFormat;
   notifyStatusChanges: boolean;
+  checkUpdates: boolean;
 }
+
+export type UpdateStatus =
+  | { state: "idle" }
+  | { state: "checking" }
+  | { state: "upToDate" }
+  | { state: "available"; version: string }
+  | { state: "installing"; version: string }
+  | { state: "failed"; message: string };
 
 export interface AppState {
   status: Status;
@@ -73,6 +84,7 @@ export interface AppState {
   appVersion: string;
   platform: string;
   material: "glass" | "vibrancy" | "acrylic" | "solid";
+  update: UpdateStatus;
 }
 
 export const api = {
@@ -84,6 +96,9 @@ export const api = {
   copySummary: () => invoke<void>("copy_summary"),
   openLogs: () => invoke<void>("open_logs"),
   hidePanel: () => invoke<void>("hide_panel"),
+  checkForUpdates: () => invoke<void>("check_for_updates"),
+  installUpdate: () => invoke<void>("install_update"),
+  copySetupCommand: (step: "install" | "run") => invoke<void>("copy_setup_command", { step }),
   quit: () => invoke<void>("quit"),
 };
 

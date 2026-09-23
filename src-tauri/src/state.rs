@@ -35,6 +35,7 @@ pub struct Inner {
     pub last_checked: Option<DateTime<Utc>>,
     pub last_success: Option<DateTime<Utc>>,
     pub panel_hidden_at: Option<Instant>,
+    pub update: crate::updates::UpdateStatus,
 }
 
 pub struct AppState {
@@ -58,6 +59,7 @@ pub struct StatePayload {
     pub app_version: &'static str,
     pub platform: &'static str,
     pub material: &'static str,
+    pub update: crate::updates::UpdateStatus,
 }
 
 impl AppState {
@@ -71,6 +73,7 @@ impl AppState {
                 last_checked: None,
                 last_success: None,
                 panel_hidden_at: None,
+                update: crate::updates::UpdateStatus::default(),
             }),
             refresh: Notify::new(),
             client,
@@ -98,6 +101,7 @@ impl AppState {
             app_version: env!("CARGO_PKG_VERSION"),
             platform: std::env::consts::OS,
             material: crate::material::current(),
+            update: inner.update.clone(),
         }
     }
 }

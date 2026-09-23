@@ -38,6 +38,10 @@ See what your local Headroom proxy saves you, live, on macOS, Windows and Linux.
 - **Exact or short numbers**: `1.1M` or `1,054,759`. In short mode, hover any count to see the exact value.
 - **Native look**: Liquid Glass on macOS 26+ (vibrancy on older macOS), Fluent Acrylic on Windows, and an opaque
   panel on Linux. Corner radii and control shapes follow each platform.
+- **Automatic updates**: new versions are checked daily, verified against Trimbit's signing key and installed
+  with one click. You can turn checks off in Settings.
+- **Guided first run**: if Headroom isn't running yet, the panel shows the install and start commands, with
+  copy buttons, instead of an error.
 - Notifications when the proxy goes down or comes back.
 - Light and dark themes, keyboard navigation and reduced-motion support.
 
@@ -96,12 +100,13 @@ Then start Headroom (`headroom proxy`, default `127.0.0.1:8787`) and launch Trim
 
 | Setting | Options | Default |
 |---|---|---|
-| Menu bar / tray shows | Session tokens removed, session value (est.), lifetime tokens removed, lifetime value (est.), icon only | Session tokens removed |
+| Menu bar / tray shows | Session tokens, session value (est.), lifetime tokens, lifetime value (est.), icon only | Session tokens |
 | Numbers | Short (`1.2M`) or exact (`1,234,567`) | Short |
 | Refresh every | 5, 10, 30 or 60 seconds | 10 s |
 | Proxy port | 1–65535 | `8787`, or `HEADROOM_PORT` if set |
 | Notify when proxy goes down or up | On / off | On |
 | Launch at login | On / off | Off |
+| Check for updates automatically | On / off (Settings → Updates → Check Now works either way) | On |
 
 ### Keyboard shortcuts (panel)
 
@@ -132,16 +137,19 @@ Settings → **Logs → Open Folder** jumps straight to the log directory. A cor
 | Dollar figures look off | Open **How?** in the panel. If it says *Rough estimate*, Headroom is using the flat fallback rate. |
 | No tray icon on Linux | Install an AppIndicator extension (GNOME) or enable the system tray in your panel. |
 | Panel doesn't open on Linux | Use **Open Trimbit** from the tray menu. |
+| Update fails on Linux | Self-update works with the AppImage. For `.deb` or `.rpm`, install the new version from the website. |
 
 ## Privacy and security
 
-Trimbit only ever talks to a Headroom proxy on your own machine.
+Trimbit talks to a Headroom proxy on your own machine, and to GitHub only to check for updates.
 
-- **Network**: requests go only to loopback addresses (`127.0.0.1`, `localhost`, `::1`), and this is enforced in
-  code. Redirects, system proxies and responses over 2 MB are refused.
+- **Network**: stats requests go only to loopback addresses (`127.0.0.1`, `localhost`, `::1`), and this is
+  enforced in code. Redirects, system proxies and responses over 2 MB are refused.
+- **Updates**: once a day Trimbit fetches `latest.json` from this repository's GitHub Releases. Updates are
+  installed only if their signature matches the public key built into the app. Turn this off in Settings.
 - **No telemetry, no accounts, no secrets.** Trimbit never reads the credential fields in Headroom's stats, so
   it never displays, logs or copies them.
-- **Least privilege**: the UI can call only the eight commands Trimbit defines. It has no filesystem, shell or
+- **Least privilege**: the UI can call only the eleven commands Trimbit defines. It has no filesystem, shell or
   network access, and runs under a strict Content Security Policy.
 
 See [SECURITY.md](SECURITY.md) for the full threat model and how to report a vulnerability.
@@ -202,9 +210,13 @@ docs/screenshots/    images used in this README
 
 1. Bump `version` in `package.json`, `src-tauri/Cargo.toml` and `src-tauri/tauri.conf.json`.
 2. Tag and push, for example `git tag v2.0.1 && git push --tags`.
-3. The Release workflow builds every platform and opens a **draft** GitHub release for review.
+3. The Release workflow builds every platform, signs the update bundles, and opens a **draft** GitHub release
+   for review. Publishing it is what makes installed copies see the update.
 
-Code signing is optional. It switches on when the `APPLE_*` repository secrets are set (see
+Update signing uses the `TAURI_SIGNING_PRIVATE_KEY` and `TAURI_SIGNING_PRIVATE_KEY_PASSWORD` repository
+secrets. Keep a backup of that key: without it, installed copies can't be updated any more.
+
+OS code signing is optional. It switches on when the `APPLE_*` repository secrets are set (see
 `.github/workflows/release.yml`). Keep certificates and passwords in GitHub secrets or your keychain, never in
 the repository.
 

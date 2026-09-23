@@ -540,6 +540,131 @@ body {
   flex: 1;
 }
 
+.banner-update {
+  align-items: center;
+  background: rgba(46, 230, 168, 0.1);
+  border: 1px solid rgba(46, 230, 168, 0.3);
+}
+
+.banner-update .icon {
+  color: var(--accent);
+}
+
+.banner-update span {
+  flex: 1;
+}
+
+/* ---- first-run welcome ---- */
+
+.welcome {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 12px 6px 4px;
+}
+
+.welcome-mark {
+  margin-bottom: 10px;
+}
+
+.welcome-mark .brand-mark {
+  height: 40px;
+}
+
+.welcome h2 {
+  margin: 0 0 6px;
+  font-size: 16px;
+  font-weight: 650;
+}
+
+.welcome > p {
+  margin: 0;
+  max-width: 290px;
+  color: var(--text-2);
+  font-size: 12.5px;
+}
+
+.welcome .small {
+  margin-top: 12px;
+  font-size: 11px;
+}
+
+.setup {
+  width: 100%;
+  margin: 16px 0 0;
+  padding: 0;
+  list-style: none;
+  counter-reset: step;
+  text-align: left;
+}
+
+.setup li {
+  position: relative;
+  padding: 0 0 12px 30px;
+  counter-increment: step;
+}
+
+.setup li::before {
+  content: counter(step);
+  position: absolute;
+  left: 0;
+  top: 0;
+  display: grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--surface-hover);
+  color: var(--text-2);
+  font-size: 11px;
+  font-weight: 650;
+}
+
+.setup-title {
+  display: block;
+  margin-bottom: 5px;
+  font-weight: 600;
+  font-size: 12.5px;
+}
+
+.setup-hint {
+  display: block;
+  font-size: 11.5px;
+  color: var(--text-3);
+}
+
+.setup-hint code {
+  display: block;
+  margin-top: 4px;
+  width: fit-content;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+}
+
+.command {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 3px 3px 9px;
+  border: 1px solid var(--border);
+  border-radius: var(--field-radius);
+  background: var(--surface);
+}
+
+.command code {
+  flex: 1;
+  padding: 0;
+  background: none;
+  white-space: nowrap;
+  overflow-x: auto;
+}
+
+.command .icon-btn {
+  width: 26px;
+  height: 26px;
+}
+
 .banner-degraded {
   background: rgba(255, 181, 71, 0.09);
   border: 1px solid rgba(255, 181, 71, 0.22);

@@ -13,6 +13,11 @@ use crate::format;
 use crate::material;
 use crate::settings::TitleMode;
 use crate::state::{AppState, Inner, Status};
+use crate::updates::{self, UpdateStatus};
+
+fn app_state(app: &AppHandle) -> std::sync::Arc<AppState> {
+    app.state::<std::sync::Arc<AppState>>().inner().clone()
+}
 
 pub const TRAY_ID: &str = "trimbit";
 pub const PANEL: &str = "panel";
@@ -54,10 +59,12 @@ pub struct TrayMenu {
     #[cfg_attr(not(target_os = "macos"), allow(dead_code))]
     menu: Menu<Wry>,
     summary: MenuItem<Wry>,
+    update: MenuItem<Wry>,
 }
 
 pub fn build(app: &AppHandle) -> tauri::Result<()> {
     let summary = MenuItem::with_id(app, "summary", "Connecting to Headroom…", false, None::<&str>)?;
+    let update = MenuItem::with_id(app, "update", "Check for Updates…", true, None::<&str>)?;
     let menu = Menu::with_items(
         app,
         &[
@@ -68,6 +75,7 @@ pub fn build(app: &AppHandle) -> tauri::Result<()> {
             &MenuItem::with_id(app, "dashboard", "Open Headroom Dashboard", true, None::<&str>)?,
             &MenuItem::with_id(app, "copy", "Copy Summary", true, None::<&str>)?,
             &PredefinedMenuItem::separator(app)?,
+            &update,
             &MenuItem::with_id(app, "settings", "Settings…", true, Some("CmdOrCtrl+,"))?,
             &MenuItem::with_id(app, "quit", "Quit Trimbit", true, Some("CmdOrCtrl+Q"))?,
         ],
@@ -90,6 +98,19 @@ pub fn build(app: &AppHandle) -> tauri::Result<()> {
             "settings" => {
                 show_panel(app);
                 log_err("navigate", app.emit_to(PANEL, "navigate", "settings").map_err(|e| e.to_string()));
+            }
+            "update" => {
+                let app = app.clone();
+                let available = matches!(app_state(&app).lock().update, UpdateStatus::Available { .. });
+                tauri::async_runtime::spawn(async move {
+                    if available {
+                        updates::install(&app).await;
+                    } else {
+                        show_panel(&app);
+                        let _ = app.emit_to(PANEL, "navigate", "settings");
+                        updates::check(&app, true).await;
+                    }
+                });
             }
             "quit" => app.exit(0),
             _ => {}
@@ -118,7 +139,7 @@ pub fn build(app: &AppHandle) -> tauri::Result<()> {
         })
         .build(app)?;
 
-    app.manage(TrayMenu { menu, summary });
+    app.manage(TrayMenu { menu, summary, update });
     Ok(())
 }
 
@@ -189,6 +210,14 @@ fn apply(app: &AppHandle, tray: &TrayIcon, inner: &Inner) -> tauri::Result<()> {
     tray.set_tooltip(Some(format!("Trimbit — {summary}")))?;
     if let Some(menu) = app.try_state::<TrayMenu>() {
         menu.summary.set_text(summary)?;
+        let (label, enabled) = match &inner.update {
+            UpdateStatus::Available { version } => (format!("Install Update {version}…"), true),
+            UpdateStatus::Installing { version } => (format!("Installing {version}…"), false),
+            UpdateStatus::Checking => ("Checking for Updates…".to_owned(), false),
+            _ => ("Check for Updates…".to_owned(), true),
+        };
+        menu.update.set_text(label)?;
+        menu.update.set_enabled(enabled)?;
     }
     Ok(())
 }
