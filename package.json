@@ -16,7 +16,9 @@
     "tauri": "tauri",
     "app:dev": "tauri dev",
     "app:build": "tauri build",
-    "icons": "tauri icon branding/png/app-icon-1024.png"
+    "icons": "tauri icon branding/png/app-icon-1024.png",
+    "site:dev": "vite --config website/vite.config.ts",
+    "site:build": "tsc --noEmit && vite build --config website/vite.config.ts && cp branding/png/social-card.png website/dist/"
   },
   "dependencies": {
     "@tauri-apps/api": "2.11.1"

@@ -1,0 +1,173 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="color-scheme" content="dark light" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self'; font-src 'self'; connect-src https://api.github.com; base-uri 'none'; form-action 'none'"
+    />
+    <meta name="referrer" content="strict-origin-when-cross-origin" />
+    <meta name="theme-color" content="#0b1220" />
+    <title>Trimbit: Headroom savings in your menu bar</title>
+    <meta
+      name="description"
+      content="An unofficial menu bar companion for the Headroom proxy. See the tokens Headroom removes, live, with honest cost estimates. macOS, Windows and Linux."
+    />
+    <link rel="icon" type="image/svg+xml" href="../branding/svg/mark-dark-bg.svg" />
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Trimbit: Headroom savings in your menu bar" />
+    <meta property="og:description" content="An unofficial menu bar companion for the Headroom proxy. macOS, Windows and Linux." />
+    <meta property="og:url" content="https://trimbit.oguztozkoparan.com/" />
+    <meta property="og:image" content="https://trimbit.oguztozkoparan.com/social-card.png" />
+    <meta name="twitter:card" content="summary_large_image" />
+  </head>
+  <body>
+    <a class="skip" href="#main">Skip to content</a>
+    <header class="nav">
+      <div class="nav-inner">
+        <a class="nav-brand" href="./" aria-label="Trimbit home">
+          <img src="../branding/svg/lockup-dark-bg.svg" alt="Trimbit" width="118" height="36" />
+        </a>
+        <nav class="nav-links" aria-label="Sections">
+          <a href="#features">Features</a>
+          <a href="#savings">How it counts</a>
+          <a href="#download">Download</a>
+          <a class="nav-github" href="https://github.com/oguztozkoparan/trimbit" rel="noopener">GitHub</a>
+        </nav>
+      </div>
+    </header>
+
+    <main id="main">
+      <section class="hero">
+        <p class="eyebrow">Unofficial companion for <a href="https://github.com/chopratejas/headroom" rel="noopener">Headroom</a></p>
+        <h1>See what Headroom saves you, <span class="accent">right in your menu bar.</span></h1>
+        <p class="lede">
+          Trimbit reads your local Headroom proxy and shows the tokens it removes, live. Dollar figures are honest
+          estimates, clearly marked. Native on macOS, Windows and Linux.
+        </p>
+        <div class="cta" id="cta">
+          <a class="btn primary" id="cta-primary" href="https://github.com/oguztozkoparan/trimbit/releases">Download Trimbit</a>
+          <a class="btn" href="https://github.com/oguztozkoparan/trimbit" rel="noopener">View source</a>
+        </div>
+        <p class="cta-note" id="cta-note">Free and open source · Apache-2.0</p>
+
+        <div class="shots">
+          <picture><source srcset="../docs/screenshots/panel-method.webp" type="image/webp" /><img src="../docs/screenshots/panel-method.png" alt="How savings are calculated" width="360" height="580" loading="lazy" /></picture>
+          <picture><source srcset="../docs/screenshots/panel-online.webp" type="image/webp" /><img class="shot-main" src="../docs/screenshots/panel-online.png" alt="Trimbit panel showing session savings" width="360" height="580" fetchpriority="high" /></picture>
+          <picture><source srcset="../docs/screenshots/panel-light.webp" type="image/webp" /><img src="../docs/screenshots/panel-light.png" alt="Trimbit panel in light mode" width="360" height="580" loading="lazy" /></picture>
+        </div>
+      </section>
+
+      <section class="section" id="features">
+        <h2>Everything at a glance, nothing you don't need</h2>
+        <div class="features">
+          <article class="feature">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 12h10M4 17h6" /></svg>
+            <h3>Tokens removed, live</h3>
+            <p>The headline is what Headroom actually measures: tokens it kept out of your prompts, this session and lifetime.</p>
+          </article>
+          <article class="feature">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3a9 9 0 1 0 0 18a9 9 0 1 0 0-18z" /><path d="M12 11v5M12 7.5v.01" /></svg>
+            <h3>Honest estimates</h3>
+            <p>Every dollar figure is marked ≈ and explained. The provider's cache discount is shown for context, never counted as Headroom's.</p>
+          </article>
+          <article class="feature">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v11H4z" /><path d="M9 20h6M12 16v4" /></svg>
+            <h3>Native on every desktop</h3>
+            <p>Liquid Glass on macOS 26, Fluent Acrylic on Windows, a clean opaque panel on Linux. A 2 MB app, not a browser.</p>
+          </article>
+          <article class="feature">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l8 3v6c0 4.5-3.4 8.2-8 9-4.6-.8-8-4.5-8-9V6z" /></svg>
+            <h3>Local only</h3>
+            <p>Talks only to a proxy on your own machine. No accounts, no telemetry, and it never reads the credentials in Headroom's stats.</p>
+          </article>
+          <article class="feature">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5" /></svg>
+            <h3>Clear status</h3>
+            <p>Online, degraded or offline at a glance. When the proxy stops, the last known data stays on screen, marked as stale.</p>
+          </article>
+          <article class="feature">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h9M17 7h3M4 17h3M11 17h9M15 5v4M9 15v4" /></svg>
+            <h3>Yours to tune</h3>
+            <p>Short or exact numbers, what the menu bar shows, refresh interval, port, notifications and launch at login.</p>
+          </article>
+        </div>
+      </section>
+
+      <section class="section" id="savings">
+        <h2>How Trimbit counts savings</h2>
+        <p class="section-lede">
+          Trimbit doesn't price anything itself. It shows the figures Headroom reports on its local
+          <code>/stats</code> endpoint, and it is explicit about which of them are Headroom's.
+        </p>
+        <div class="ledger">
+          <div class="ledger-row counted">
+            <div>
+              <h3>Tokens removed</h3>
+              <p>Measured by Headroom on every request: compressed message content plus tool schemas kept out of the prompt.</p>
+            </div>
+            <span class="tag yes">Headline</span>
+          </div>
+          <div class="ledger-row counted">
+            <div>
+              <h3>Estimated value</h3>
+              <p><code>removed tokens × model input price</code>, marked ≈. It estimates input cost avoided; on a subscription it's an equivalent value, not money back.</p>
+            </div>
+            <span class="tag yes">Counted</span>
+          </div>
+          <div class="ledger-row">
+            <div>
+              <h3>Provider cache discount</h3>
+              <p><code>cached tokens × (input price − cache-read price)</code>. Clients like Claude Code cache prompts on their own, so this is shown for context only.</p>
+            </div>
+            <span class="tag no">Not counted</span>
+          </div>
+        </div>
+        <p class="note">
+          When Headroom can't load LiteLLM's price table, it prices every model at a flat $3 per 1M tokens. Trimbit
+          detects this and labels the numbers <strong>Rough estimate</strong>.
+        </p>
+      </section>
+
+      <section class="section" id="download">
+        <h2>Download</h2>
+        <p class="section-lede" id="release-line">Pick the installer for your system from the latest release.</p>
+        <div class="downloads" id="downloads">
+          <a class="download" data-os="mac" href="https://github.com/oguztozkoparan/trimbit/releases">
+            <strong>macOS</strong><span>Apple silicon &amp; Intel · .dmg</span>
+          </a>
+          <a class="download" data-os="windows" href="https://github.com/oguztozkoparan/trimbit/releases">
+            <strong>Windows</strong><span>10 (1809+) and 11 · .exe</span>
+          </a>
+          <a class="download" data-os="linux" href="https://github.com/oguztozkoparan/trimbit/releases">
+            <strong>Linux</strong><span>.deb · .rpm · .AppImage</span>
+          </a>
+        </div>
+        <ol class="steps">
+          <li>Start Headroom: <code>headroom proxy</code> (default <code>127.0.0.1:8787</code>).</li>
+          <li>Install and open Trimbit. Left-click the tray icon for the panel, right-click for the menu.</li>
+          <li>
+            Builds aren't code-signed yet. On macOS, right-click the app and choose <strong>Open</strong> the first time;
+            on Windows, choose <strong>More info → Run anyway</strong>.
+          </li>
+        </ol>
+      </section>
+    </main>
+
+    <footer class="footer">
+      <p>
+        Trimbit is an independent project and is not affiliated with or endorsed by the Headroom project.
+      </p>
+      <p>
+        <a href="https://github.com/oguztozkoparan/trimbit" rel="noopener">Source</a> ·
+        <a href="https://github.com/oguztozkoparan/trimbit/blob/master/LICENSE" rel="noopener">Apache-2.0</a> ·
+        <a href="https://github.com/oguztozkoparan/trimbit/blob/master/SECURITY.md" rel="noopener">Security</a> ·
+        <a href="https://oguztozkoparan.com" rel="noopener">Mehmet Oğuz Tozkoparan</a>
+      </p>
+    </footer>
+
+    <script type="module" src="./src/main.ts"></script>
+  </body>
+</html>

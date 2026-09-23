@@ -30,3 +30,6 @@ __pycache__/
 *.key
 *.cer
 *.mobileprovision
+
+# Product site build output
+website/dist/
