@@ -1,0 +1,18 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "panel",
+  "description": "The tray panel may read state, change settings and trigger a fixed set of actions. No filesystem, shell, HTTP or window-management access.",
+  "windows": ["panel"],
+  "permissions": [
+    "core:event:allow-listen",
+    "core:event:allow-unlisten",
+    "allow-get-state",
+    "allow-refresh",
+    "allow-update-settings",
+    "allow-open-dashboard",
+    "allow-copy-summary",
+    "allow-open-logs",
+    "allow-hide-panel",
+    "allow-quit"
+  ]
+}

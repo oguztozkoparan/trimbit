@@ -1,86 +1,32 @@
-# Byte-compiled / cache dosyaları
-__pycache__/
-*.py[cod]
-*$py.class
-
-# Dağıtım / paketleme
-build/
-dist/
-*.egg-info/
-*.egg
-.eggs/
-wheels/
-*.whl
-
-# Sanal ortamlar
-trimbit-legacy-env/
-venv/
-env/
-.venv/
-ENV/
-env.bak/
-venv.bak/
-
-# pip / paket yöneticileri
-.Python
-pip-log.txt
-poetry.lock
-
-# Ortam değişkenleri / gizli bilgiler
-.env
-.env.*
-*.env
-
-# IDE dosyaları
-.idea/
-.vscode/
-*.swp
-*.swo
-*.sublime-project
-*.sublime-workspace
-
-# Jupyter Notebook
-.ipynb_checkpoints/
-
-# Test / coverage
-.pytest_cache/
-.coverage
-.coverage.*
-htmlcov/
-.tox/
-.nox/
-coverage.xml
-*.cover
-
-# ruff
-.ruff_cache/
-
-# mypy / type checking
-.mypy_cache/
-.pytype/
-.dmypy.json
-
-# Veritabanları
-*.db
-*.sqlite3
-
-# Log dosyaları
-*.log
-logs/
-
-# OS dosyaları
+# OS / editors
 .DS_Store
 Thumbs.db
 desktop.ini
+.idea/
+.vscode/
+*.swp
 
-# Flask / Django
-instance/
-.webassets-cache
-staticfiles/
-media/
+# Node / frontend
+node_modules/
+ui-dist/
+*.log
+npm-debug.log*
 
-# Celery
-celerybeat-schedule
+# Rust / Tauri
+src-tauri/target/
+src-tauri/gen/schemas/
 
-# Sphinx dokümantasyon
-docs/_build/
+# Python tooling for branding/build.py
+.venv/
+__pycache__/
+*.py[cod]
+.ruff_cache/
+
+# Secrets: signing keys and certificates never belong in the repo
+.env
+.env.*
+*.p12
+*.pem
+*.key
+*.cer
+*.mobileprovision

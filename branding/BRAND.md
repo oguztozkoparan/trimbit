@@ -76,7 +76,7 @@ Contrast (WCAG), checked by `build.py`:
 All assets come from one script, so geometry and colours stay in sync:
 
 ```sh
-.venv/bin/pip install -r requirements-dev.txt
+.venv/bin/pip install -r branding/requirements.txt
 .venv/bin/python branding/build.py
 ```
 

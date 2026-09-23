@@ -3,7 +3,7 @@
     .venv/bin/python branding/build.py
 
 Writes branding/svg/*.svg (sources) and branding/png/*.png (renders).
-Requires: resvg-py, fonttools (see requirements-dev.txt).
+Requires: resvg-py, fonttools (see branding/requirements.txt).
 """
 
 from __future__ import annotations

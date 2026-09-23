@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="color-scheme" content="dark light" />
+    <title>Trimbit UI preview</title>
+    <style>
+      /* Approximates the 360×580 tray panel over a desktop background. */
+      html { background: #3b4454; }
+      body { width: 360px; height: 580px; }
+      /* Approximates native materials (?material=glass|vibrancy|acrylic) over a wallpaper. */
+      html:not([data-material="solid"]) {
+        background: radial-gradient(circle at 20% 20%, #ff8a5b, transparent 45%),
+          radial-gradient(circle at 80% 60%, #4f7cff, transparent 50%), #2a3a55;
+      }
+      html:not([data-material="solid"]) .panel { backdrop-filter: blur(28px) saturate(1.7); }
+    </style>
+  </head>
+  <body>
+    <div id="app"></div>
+    <script type="module" src="./mock.ts"></script>
+  </body>
+</html>
