@@ -1,0 +1,86 @@
+# Byte-compiled / cache dosyaları
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Dağıtım / paketleme
+build/
+dist/
+*.egg-info/
+*.egg
+.eggs/
+wheels/
+*.whl
+
+# Sanal ortamlar
+trimbit-legacy-env/
+venv/
+env/
+.venv/
+ENV/
+env.bak/
+venv.bak/
+
+# pip / paket yöneticileri
+.Python
+pip-log.txt
+poetry.lock
+
+# Ortam değişkenleri / gizli bilgiler
+.env
+.env.*
+*.env
+
+# IDE dosyaları
+.idea/
+.vscode/
+*.swp
+*.swo
+*.sublime-project
+*.sublime-workspace
+
+# Jupyter Notebook
+.ipynb_checkpoints/
+
+# Test / coverage
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+.tox/
+.nox/
+coverage.xml
+*.cover
+
+# ruff
+.ruff_cache/
+
+# mypy / type checking
+.mypy_cache/
+.pytype/
+.dmypy.json
+
+# Veritabanları
+*.db
+*.sqlite3
+
+# Log dosyaları
+*.log
+logs/
+
+# OS dosyaları
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Flask / Django
+instance/
+.webassets-cache
+staticfiles/
+media/
+
+# Celery
+celerybeat-schedule
+
+# Sphinx dokümantasyon
+docs/_build/
