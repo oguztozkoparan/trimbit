@@ -22,7 +22,6 @@ tauri-plugin-clipboard-manager = "2.3.3"
 tauri-plugin-log = "2.9.2"
 tauri-plugin-notification = "2.4.0"
 tauri-plugin-opener = "2.5.5"
-tauri-plugin-positioner = { version = "2.3.4", features = ["tray-icon"] }
 tauri-plugin-single-instance = "2.4.5"
 # Plain HTTP to loopback only: no TLS stack, no proxy, no redirects.
 reqwest = { version = "0.13.5", default-features = false }
@@ -35,6 +34,7 @@ chrono = { version = "0.4", default-features = false, features = ["clock", "serd
 
 [target.'cfg(target_os = "macos")'.dependencies]
 objc2 = "0.6.4"
+objc2-foundation = { version = "0.3.2", default-features = false, features = ["std", "NSGeometry", "objc2-core-foundation"] }
 objc2-app-kit = { version = "0.3.2", default-features = false, features = ["std", "NSGlassEffectView", "NSView", "NSResponder", "NSWindow", "NSGraphics", "objc2-core-foundation"] }
 
 [dev-dependencies]

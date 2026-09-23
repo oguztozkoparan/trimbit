@@ -92,6 +92,12 @@ body {
 [data-material="glass"] {
   --panel-bg: rgba(11, 18, 32, 0.08);
   --panel-border: transparent;
+  /* The native glass sits inset in the window (GLASS_INSET in material.rs). */
+  --glass-inset: 12px;
+}
+
+[data-material="glass"] #app {
+  padding: var(--glass-inset);
 }
 [data-material="vibrancy"] {
   --panel-bg: rgba(11, 18, 32, 0.3);
@@ -1019,6 +1025,22 @@ summary:focus-visible {
 
 .ledger-row b {
   font-weight: 650;
+}
+
+/* Context-only figures (not Headroom's saving) read as secondary. */
+.ledger-row.context .ledger-label,
+.ledger-row.context b {
+  color: var(--text-2);
+  font-weight: 500;
+}
+
+.ledger-row.context .swatch {
+  opacity: 0.6;
+}
+
+.hero .ledger {
+  padding-top: 10px;
+  border-top: 1px solid var(--border);
 }
 
 .hero .hero-sub {

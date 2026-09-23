@@ -1,16 +1,16 @@
 //! System tray icon, its context menu and the panel window's show/hide logic.
 
-use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::Mutex;
 use std::time::{Duration, Instant};
 
 use tauri::image::Image;
 use tauri::menu::{Menu, MenuItem, PredefinedMenuItem};
 use tauri::tray::{MouseButton, MouseButtonState, TrayIcon, TrayIconBuilder, TrayIconEvent};
-use tauri::{AppHandle, Emitter, Manager, Theme, WebviewWindow, Wry};
-use tauri_plugin_positioner::{Position, WindowExt};
+use tauri::{AppHandle, Emitter, Manager, PhysicalPosition, Theme, WebviewWindow, Wry};
 
 use crate::actions;
 use crate::format;
+use crate::material;
 use crate::settings::TitleMode;
 use crate::state::{AppState, Inner, Status};
 
@@ -21,7 +21,12 @@ pub const PANEL: &str = "panel";
 /// then delivers the click. Ignore the click if the panel was hidden just now.
 const REOPEN_GRACE: Duration = Duration::from_millis(300);
 
-static TRAY_POSITION_KNOWN: AtomicBool = AtomicBool::new(false);
+/// Space between the tray icon and the panel, and between the panel and screen edges (logical px).
+const PANEL_GAP: f64 = 6.0;
+
+/// Tray icon bounds in physical screen pixels (x, y, width, height), from the latest tray event.
+/// Linux never reports it, so the panel falls back to a screen corner there.
+static TRAY_RECT: Mutex<Option<(f64, f64, f64, f64)>> = Mutex::new(None);
 
 macro_rules! icon {
     ($name:literal) => {
@@ -45,6 +50,9 @@ fn icon_bytes(status: Status, theme: Theme) -> &'static [u8] {
 }
 
 pub struct TrayMenu {
+    // Only popped up by hand on macOS; elsewhere the tray owns it.
+    #[cfg_attr(not(target_os = "macos"), allow(dead_code))]
+    menu: Menu<Wry>,
     summary: MenuItem<Wry>,
 }
 
@@ -66,12 +74,14 @@ pub fn build(app: &AppHandle) -> tauri::Result<()> {
     )?;
 
     let icon = Image::from_bytes(icon_bytes(Status::Connecting, system_theme(app)))?;
-    TrayIconBuilder::with_id(TRAY_ID)
+    let builder = TrayIconBuilder::with_id(TRAY_ID)
         .icon(icon)
         .icon_as_template(cfg!(target_os = "macos"))
-        .tooltip("Trimbit — connecting…")
-        .menu(&menu)
-        .show_menu_on_left_click(false)
+        .tooltip("Trimbit — connecting…");
+    // macOS: a menu attached to the status item opens on any click that misses tray-icon's click
+    // catcher (e.g. on the title text), so it stays detached and right-click pops it up instead.
+    let builder = if cfg!(target_os = "macos") { builder } else { builder.menu(&menu).show_menu_on_left_click(false) };
+    builder
         .on_menu_event(|app, event| match event.id().as_ref() {
             "show" => show_panel(app),
             "refresh" => actions::refresh(app),
@@ -84,23 +94,45 @@ pub fn build(app: &AppHandle) -> tauri::Result<()> {
             "quit" => app.exit(0),
             _ => {}
         })
+        // Left click toggles the panel; right click opens the menu (show_menu_on_left_click(false)).
         .on_tray_icon_event(|tray, event| {
-            let app = tray.app_handle();
-            tauri_plugin_positioner::on_tray_event(app, &event);
+            if let TrayIconEvent::Click { rect, .. }
+            | TrayIconEvent::Enter { rect, .. }
+            | TrayIconEvent::Move { rect, .. } = &event
+            {
+                // tray-icon reports physical pixels, so a scale of 1.0 leaves them unchanged.
+                let pos = rect.position.to_physical::<f64>(1.0);
+                let size = rect.size.to_physical::<f64>(1.0);
+                *TRAY_RECT.lock().unwrap_or_else(|p| p.into_inner()) = Some((pos.x, pos.y, size.width, size.height));
+            }
             match event {
-                TrayIconEvent::Click { .. } | TrayIconEvent::Enter { .. } | TrayIconEvent::Move { .. } => {
-                    TRAY_POSITION_KNOWN.store(true, Ordering::Relaxed);
+                TrayIconEvent::Click { button: MouseButton::Left, button_state: MouseButtonState::Up, .. } => {
+                    toggle_panel(tray.app_handle());
+                }
+                #[cfg(target_os = "macos")]
+                TrayIconEvent::Click { button: MouseButton::Right, button_state: MouseButtonState::Up, .. } => {
+                    popup_menu(tray.app_handle());
                 }
                 _ => {}
-            }
-            if let TrayIconEvent::Click { button: MouseButton::Left, button_state: MouseButtonState::Up, .. } = event {
-                toggle_panel(app);
             }
         })
         .build(app)?;
 
-    app.manage(TrayMenu { summary });
+    app.manage(TrayMenu { menu, summary });
     Ok(())
+}
+
+/// Opens the tray menu at the pointer. The panel window only anchors the call: with no position,
+/// the menu is placed in screen coordinates, so the panel doesn't need to be visible.
+#[cfg(target_os = "macos")]
+fn popup_menu(app: &AppHandle) {
+    use tauri::menu::ContextMenu;
+
+    let (Some(window), Some(menu)) = (panel(app), app.try_state::<TrayMenu>()) else { return };
+    hide_panel(app);
+    if let Err(e) = menu.menu.popup(window.as_ref().window()) {
+        log::warn!("could not open tray menu: {e}");
+    }
 }
 
 fn log_err(what: &str, result: Result<(), String>) {
@@ -134,9 +166,9 @@ fn apply(app: &AppHandle, tray: &TrayIcon, inner: &Inner) -> tauri::Result<()> {
     let numbers = inner.settings.number_format;
     let title = snapshot.and_then(|s| match inner.settings.title_mode {
         TitleMode::SessionTokens => Some(format::tokens(s.session.tokens_saved, numbers)),
-        TitleMode::SessionUsd => Some(format::usd(s.session.total_usd)),
+        TitleMode::SessionUsd => Some(format!("≈{}", format::usd(s.session.compression_usd))),
         TitleMode::LifetimeTokens => Some(format::tokens(s.lifetime.tokens_saved, numbers)),
-        TitleMode::LifetimeUsd => Some(format::usd(s.lifetime.total_usd)),
+        TitleMode::LifetimeUsd => Some(format!("≈{}", format::usd(s.lifetime.compression_usd))),
         TitleMode::IconOnly => None,
     });
     // Windows has no tray titles; macOS and Linux (AppIndicator label) do.
@@ -148,9 +180,9 @@ fn apply(app: &AppHandle, tray: &TrayIcon, inner: &Inner) -> tauri::Result<()> {
         (Status::Connecting, _) => "Connecting to Headroom…".to_owned(),
         (Status::Offline, _) => format!("Headroom proxy offline · port {}", inner.settings.port),
         (_, Some(s)) => format!(
-            "Session: {} tokens · {} saved",
+            "Session: {} tokens removed · ≈ {}",
             format::tokens(s.session.tokens_saved, numbers),
-            format::usd(s.session.total_usd)
+            format::usd(s.session.compression_usd)
         ),
         (_, None) => "Headroom proxy online".to_owned(),
     };
@@ -176,24 +208,55 @@ pub fn toggle_panel(app: &AppHandle) {
 
 pub fn show_panel(app: &AppHandle) {
     let Some(window) = panel(app) else { return };
-    let position = if TRAY_POSITION_KNOWN.load(Ordering::Relaxed) {
-        if cfg!(target_os = "macos") {
-            Position::TrayCenter
-        } else {
-            Position::TrayBottomCenter
-        }
-    } else if cfg!(target_os = "windows") {
-        Position::BottomRight
-    } else {
-        Position::TopRight
-    };
-    if let Err(e) = window.as_ref().window().move_window(position) {
-        log::debug!("could not position panel: {e}");
-    }
+    position_panel(app, &window);
     let _ = window.show();
+    // macOS may constrain a window the first time it is ordered in; place it again once visible.
+    position_panel(app, &window);
     let _ = window.set_focus();
     let _ = app.emit_to(PANEL, "panel-shown", ());
     actions::refresh(app);
+}
+
+/// Centres the panel under (or, for a bottom taskbar, above) the tray icon, on the monitor that
+/// holds the icon, and keeps it inside that monitor's work area.
+fn position_panel(app: &AppHandle, window: &WebviewWindow) {
+    let Ok(size) = window.outer_size() else { return };
+    let tray = *TRAY_RECT.lock().unwrap_or_else(|p| p.into_inner());
+    let monitor = match tray {
+        Some((x, y, w, h)) => app.monitor_from_point(x + w / 2.0, y + h / 2.0).ok().flatten(),
+        None => None,
+    }
+    .or_else(|| app.primary_monitor().ok().flatten());
+    let Some(monitor) = monitor else { return };
+
+    let scale = monitor.scale_factor();
+    let area = monitor.work_area();
+    let (ax, ay) = (f64::from(area.position.x), f64::from(area.position.y));
+    let (aw, ah) = (f64::from(area.size.width), f64::from(area.size.height));
+    let (w, h) = (f64::from(size.width), f64::from(size.height));
+    // The glass sits inset in its window; offset so the visible panel keeps the gap.
+    let inset = material::window_inset() * scale;
+    let gap = PANEL_GAP * scale;
+
+    let (x, y) = match tray {
+        Some((tx, ty, tw, th)) => {
+            let x = tx + tw / 2.0 - w / 2.0;
+            let tray_at_bottom = ty + th / 2.0 > ay + ah / 2.0;
+            let y = if tray_at_bottom { ty - h - gap + inset } else { ty + th + gap - inset };
+            (x, y)
+        }
+        // No tray bounds (Linux): top-right, or bottom-right where the taskbar usually is.
+        None if cfg!(target_os = "windows") => (ax + aw - w - gap + inset, ay + ah - h - gap + inset),
+        None => (ax + aw - w - gap + inset, ay + gap - inset),
+    };
+    // `clamp` panics when min > max (a panel wider than the screen), so order the bounds first.
+    let (min_x, min_y) = (ax + gap - inset, ay - inset);
+    let x = x.clamp(min_x, (ax + aw - w - gap + inset).max(min_x));
+    let y = y.clamp(min_y, (ay + ah - h + inset).max(min_y));
+
+    if let Err(e) = window.set_position(PhysicalPosition::new(x.round() as i32, y.round() as i32)) {
+        log::debug!("could not position panel: {e}");
+    }
 }
 
 pub fn hide_panel(app: &AppHandle) {

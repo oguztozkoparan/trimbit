@@ -4,7 +4,7 @@
 </p>
 
 <p align="center"><b>An unofficial menu bar companion for <a href="https://github.com/chopratejas/headroom">Headroom</a>.</b><br>
-Live token and cost savings from your local Headroom proxy, on macOS, Windows and Linux.</p>
+See what your local Headroom proxy saves you, live, on macOS, Windows and Linux.</p>
 
 > Trimbit is an independent project. It is not affiliated with or endorsed by the Headroom project.
 
@@ -18,17 +18,17 @@ Live token and cost savings from your local Headroom proxy, on macOS, Windows an
 
 **In the tray**
 
-- Session tokens or dollars saved, lifetime tokens or dollars, or just the icon. You choose in Settings.
+- Session or lifetime tokens removed, their estimated value, or just the icon. You choose in Settings.
 - The icon changes when the proxy is unreachable. The tooltip and menu carry a one-line summary.
 - Right-click menu: Open Trimbit, Refresh Now, Open Headroom Dashboard, Copy Summary, Settings, Quit.
 
-**In the panel** (click the tray icon)
+**In the panel** (left-click the tray icon; right-click opens the menu)
 
-- **This session**: estimated savings, split into Headroom's own compression and the provider's prompt-cache
-  discount, plus tokens compressed and the share of input they represent.
+- **This session**: tokens Headroom removed (measured) as the headline, with their estimated dollar value. The
+  provider's prompt-cache discount is shown separately for context and is not counted as Headroom's saving.
 - **How savings are calculated**: the formula behind every dollar figure, where prices come from, and a clear
   warning when Headroom is using a flat fallback rate (see [below](#how-savings-are-calculated)).
-- **Lifetime and proxy totals**: lifetime savings, all-layer token savings, requests and cache hit rate,
+- **Lifetime and proxy totals**: lifetime value, all-layer token savings, requests and cache hit rate,
   average latency, tool-schema vs. compression split, top models, and Headroom's own optimization tips.
 - **Honest status**: online, degraded or offline, with proxy version and uptime. When the proxy goes away, the
   last known data stays on screen and is marked as stale.
@@ -46,12 +46,14 @@ Live token and cost savings from your local Headroom proxy, on macOS, Windows an
 Trimbit doesn't price anything itself. It shows the figures Headroom reports on its local `/stats` endpoint,
 which Headroom computes per request as traffic passes through the proxy.
 
-| Figure | Formula | Whose saving |
+| Figure | Formula | Counted as Headroom's saving? |
 |---|---|---|
-| Headroom compression | removed tokens × model input price | Headroom's. *Removed tokens* are compressed message content plus tool schemas Headroom kept out of the prompt. |
-| Prompt cache discount | cached tokens × (input price − cache-read price) | The provider's. Headroom keeps prompts stable so more of them hit the cache, but the discount itself is the provider's caching. |
+| Tokens removed (headline) | measured by Headroom per request | Yes. This is the one number Headroom measures directly. |
+| Estimated value | removed tokens × model input price | Yes. *Removed tokens* are compressed message content plus tool schemas Headroom kept out of the prompt. |
+| Provider cache discount | cached tokens × (input price − cache-read price) | **No.** Clients like Claude Code cache prompts on their own, so this discount mostly happens with or without Headroom. Trimbit shows it for context only. |
 
-All amounts are USD estimates of input cost avoided, not your invoice. Output tokens are not included.
+All dollar amounts are marked **≈**. They estimate input cost avoided; they aren't your invoice, and on a
+flat-rate subscription they're an equivalent value, not money back. Output tokens are not included.
 
 > [!IMPORTANT]
 > Headroom takes per-model prices from LiteLLM's pricing table. When LiteLLM isn't available (for example on
@@ -94,7 +96,7 @@ Then start Headroom (`headroom proxy`, default `127.0.0.1:8787`) and launch Trim
 
 | Setting | Options | Default |
 |---|---|---|
-| Menu bar / tray shows | Session tokens, session money, lifetime tokens, lifetime money, icon only | Session tokens |
+| Menu bar / tray shows | Session tokens removed, session value (est.), lifetime tokens removed, lifetime value (est.), icon only | Session tokens removed |
 | Numbers | Short (`1.2M`) or exact (`1,234,567`) | Short |
 | Refresh every | 5, 10, 30 or 60 seconds | 10 s |
 | Proxy port | 1–65535 | `8787`, or `HEADROOM_PORT` if set |
@@ -127,7 +129,7 @@ Settings → **Logs → Open Folder** jumps straight to the log directory. A cor
 | Symptom | What to check |
 |---|---|
 | "Can't reach Headroom" | Is `headroom proxy` running? Does the port in Settings match the proxy's (`headroom proxy --port …`)? |
-| Dollar figures look high | Open **How?** in the panel. If it says *Rough estimate*, Headroom is using the flat fallback rate. |
+| Dollar figures look off | Open **How?** in the panel. If it says *Rough estimate*, Headroom is using the flat fallback rate. |
 | No tray icon on Linux | Install an AppIndicator extension (GNOME) or enable the system tray in your panel. |
 | Panel doesn't open on Linux | Use **Open Trimbit** from the tray menu. |
 

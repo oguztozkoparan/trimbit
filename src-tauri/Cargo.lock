@@ -3939,21 +3939,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "tauri-plugin-positioner"
-version = "2.3.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "cf96307aaa63410af903ba182b88454864efd7bfcf6659c8f72225e840687240"
-dependencies = [
- "log",
- "serde",
- "serde_json",
- "serde_repr",
- "tauri",
- "tauri-plugin",
- "thiserror 2.0.20",
-]
-
-[[package]]
 name = "tauri-plugin-single-instance"
 version = "2.4.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4480,6 +4465,7 @@ dependencies = [
  "log",
  "objc2",
  "objc2-app-kit",
+ "objc2-foundation",
  "reqwest",
  "serde",
  "serde_json",
@@ -4490,7 +4476,6 @@ dependencies = [
  "tauri-plugin-log",
  "tauri-plugin-notification",
  "tauri-plugin-opener",
- "tauri-plugin-positioner",
  "tauri-plugin-single-instance",
  "tempfile",
  "thiserror 2.0.20",

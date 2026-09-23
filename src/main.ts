@@ -170,6 +170,9 @@ function splitBar(parts: { label: string; value: number; display: string; cls: s
   );
 }
 
+/** Dollar estimates are never exact; the "≈" keeps that visible wherever a price appears. */
+const approx = (n: number): string => `≈ ${fmt.usd(n)}`;
+
 function hero(snap: Snapshot): HTMLElement {
   const s = snap.session;
   const meta = [`${fmt.grouped(s.requests)} requests`, snap.sessionStarted ? `since ${fmt.clock(snap.sessionStarted)}` : ""]
@@ -184,14 +187,20 @@ function hero(snap: Snapshot): HTMLElement {
       "This session",
       h("span", { class: "muted", text: meta, ...(snap.sessionStarted ? { title: `Started ${fmt.ago(snap.sessionStarted)}` } : {}) }),
     ),
+    // Headline: what Headroom itself removed, as a measured token count.
     h(
       "div",
       { class: "hero-row" },
       h(
         "div",
         {},
-        h("div", { class: "hero-value num", text: fmt.usd(s.totalUsd) }),
-        h("div", { class: "hero-label", text: "estimated savings" }),
+        h("div", {
+          class: "hero-value num",
+          text: tokens(s.tokensSaved),
+          ...(exactTitle(s.tokensSaved) ? { title: exactTitle(s.tokensSaved) as string } : {}),
+        }),
+        h("div", { class: "hero-label", text: "tokens removed by Headroom" }),
+        h("div", { class: "hero-label muted", text: `${fmt.percent(s.savingsPercent)} of input tokens` }),
       ),
       h(
         "button",
@@ -205,12 +214,38 @@ function hero(snap: Snapshot): HTMLElement {
         h("span", { text: "How?" }),
       ),
     ),
-    s.totalUsd > 0 ? ledger(snap) : null,
     h(
       "div",
-      { class: "hero-sub" },
-      h("b", { class: "accent num", text: `${tokens(s.tokensSaved)} tokens`, ...(exactTitle(s.tokensSaved) ? { title: exactTitle(s.tokensSaved) as string } : {}) }),
-      ` compressed · ${fmt.percent(s.savingsPercent)} of input`,
+      { class: "ledger" },
+      h(
+        "div",
+        { class: "ledger-row" },
+        h("span", { class: "swatch seg-a" }),
+        h(
+          "span",
+          { class: "ledger-text" },
+          h("span", { class: "ledger-label", text: "Estimated value" }),
+          h("span", { class: "ledger-sub", text: snap.litellmPricing === false ? "at a flat $3 / 1M tokens" : "at list input prices" }),
+        ),
+        h("b", { class: "num", text: approx(s.compressionUsd) }),
+      ),
+      s.cacheUsd > 0
+        ? h(
+            "div",
+            {
+              class: "ledger-row context",
+              title: `${providerName(snap.cacheProvider)} bills cached prompt tokens at a discount. Most tools cache prompts on their own, so this isn't counted as Headroom's saving.`,
+            },
+            h("span", { class: "swatch seg-b" }),
+            h(
+              "span",
+              { class: "ledger-text" },
+              h("span", { class: "ledger-label", text: `${providerName(snap.cacheProvider)} cache discount` }),
+              h("span", { class: "ledger-sub", text: `${tokens(s.cacheReadTokens)} tokens · not counted` }),
+            ),
+            h("b", { class: "num", text: approx(s.cacheUsd) }),
+          )
+        : null,
     ),
     snap.litellmPricing === false
       ? h(
@@ -223,44 +258,6 @@ function hero(snap: Snapshot): HTMLElement {
   );
 }
 
-/** Where the session's dollars come from, one line per source. */
-function ledger(snap: Snapshot): HTMLElement {
-  const s = snap.session;
-  const rows = [
-    {
-      cls: "seg-a",
-      label: "Headroom compression",
-      sub: "removed tokens × input price",
-      value: s.compressionUsd,
-    },
-    {
-      cls: "seg-b",
-      label: "Prompt cache discount",
-      sub: `${tokens(s.cacheReadTokens)} cached tokens · ${providerName(snap.cacheProvider)}`,
-      value: s.cacheUsd,
-      title: exactTitle(s.cacheReadTokens, "cached tokens"),
-    },
-  ];
-  return h(
-    "div",
-    { class: "ledger" },
-    h(
-      "div",
-      { class: "split-track", attrs: { role: "img", "aria-label": rows.map((r) => `${r.label} ${fmt.usd(r.value)}`).join(", ") } },
-      ...rows.map((r) => h("span", { class: `split-seg ${r.cls}`, style: { width: `${fmt.share(r.value, s.totalUsd)}%` } })),
-    ),
-    ...rows.map((r) =>
-      h(
-        "div",
-        { class: "ledger-row", ...(r.title ? { title: r.title } : {}) },
-        h("span", { class: `swatch ${r.cls}` }),
-        h("span", { class: "ledger-text" }, h("span", { class: "ledger-label", text: r.label }), h("span", { class: "ledger-sub", text: r.sub })),
-        h("b", { class: "num", text: fmt.usd(r.value) }),
-      ),
-    ),
-  );
-}
-
 function grid(snap: Snapshot): HTMLElement {
   const cachedPct = fmt.share(snap.requestsCached, snap.requestsTotal);
   const failures = snap.requestsFailed + snap.requestsRateLimited;
@@ -268,8 +265,8 @@ function grid(snap: Snapshot): HTMLElement {
     "section",
     { class: "grid" },
     stat(
-      "Lifetime saved",
-      fmt.usd(snap.lifetime.totalUsd),
+      "Lifetime · Headroom",
+      approx(snap.lifetime.compressionUsd),
       exactNumbers()
         ? `${tokens(snap.lifetime.tokensSaved)} tokens`
         : `${tokens(snap.lifetime.tokensSaved)} tokens · ${fmt.grouped(snap.lifetime.requests)} req`,
@@ -445,10 +442,10 @@ function renderMethod(s: AppState): void {
 
   const cache = methodCard(
     "seg-b",
-    "Prompt cache discount",
+    "Provider cache discount (not counted)",
     flat ? `cached tokens × ${flatRate} (flat rate)` : "cached tokens × (input price − cache-read price)",
     [
-      `${provider} bills cached prompt tokens at a lower rate${discount}. That discount comes from the provider's caching; Headroom keeps prompts stable so more of them hit the cache.${hitRate}`,
+      `${provider} bills cached prompt tokens at a lower rate${discount}. Most tools, Claude Code included, cache prompts on their own, so this discount mostly happens with or without Headroom. Headroom may raise the hit rate, but it doesn't report by how much, so Trimbit shows this figure for context only.${hitRate}`,
     ],
     snap
       ? [
@@ -493,11 +490,17 @@ function renderMethod(s: AppState): void {
   const content = h(
     "main",
     { class: "content method" },
-    h("p", { class: "method-intro", text: "Trimbit shows Headroom's own numbers. Headroom prices each request as it passes through the proxy; nothing is added on top." }),
+    h("p", {
+      class: "method-intro",
+      text: "Trimbit shows Headroom's own numbers. The headline is tokens Headroom removed, which is measured. Dollar values are estimates: token counts multiplied by list prices. Only compression is counted as Headroom's saving.",
+    }),
     compression,
     cache,
     prices,
-    h("p", { class: "footnote", text: "All amounts are USD estimates of input cost avoided, not your invoice. Output tokens aren't included." }),
+    h("p", {
+      class: "footnote",
+      text: "All amounts are USD estimates of input cost avoided, not your invoice. On a flat-rate subscription they are an equivalent value, not money back. Output tokens aren't included.",
+    }),
   );
 
   root.replaceChildren(
@@ -513,10 +516,10 @@ function renderMethod(s: AppState): void {
 // ---- settings view ---------------------------------------------------------------
 
 const TITLE_MODES: [TitleMode, string][] = [
-  ["session_tokens", "Session tokens saved"],
-  ["session_usd", "Session money saved"],
-  ["lifetime_tokens", "Lifetime tokens saved"],
-  ["lifetime_usd", "Lifetime money saved"],
+  ["session_tokens", "Session tokens removed"],
+  ["session_usd", "Session value (est.)"],
+  ["lifetime_tokens", "Lifetime tokens removed"],
+  ["lifetime_usd", "Lifetime value (est.)"],
   ["icon_only", "Icon only"],
 ];
 const REFRESH_CHOICES = [5, 10, 30, 60];

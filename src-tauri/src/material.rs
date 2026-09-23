@@ -12,6 +12,15 @@ pub fn current() -> &'static str {
     CURRENT.get().copied().unwrap_or("solid")
 }
 
+/// Transparent margin between the window edge and the visible panel (logical px).
+pub fn window_inset() -> f64 {
+    #[cfg(target_os = "macos")]
+    if current() == "glass" {
+        return platform::GLASS_INSET;
+    }
+    0.0
+}
+
 pub fn apply(window: &WebviewWindow) {
     let material = platform::apply(window);
     log::info!("panel material: {material}");
@@ -23,11 +32,15 @@ mod platform {
     use objc2::runtime::AnyClass;
     use objc2::MainThreadMarker;
     use objc2_app_kit::{NSAutoresizingMaskOptions, NSGlassEffectView, NSWindow, NSWindowOrderingMode};
+    use objc2_foundation::NSRect;
     use tauri::window::{Effect, EffectState, EffectsBuilder};
-    use tauri::WebviewWindow;
+    use tauri::{LogicalSize, WebviewWindow};
 
     // Matches --panel-radius for macOS in src/styles.css.
     const CORNER_RADIUS: f64 = 16.0;
+    /// Room around the glass for its own edge light and shadow, which would otherwise be
+    /// clipped at the window edge. Matches `--glass-inset` in src/styles.css.
+    pub const GLASS_INSET: f64 = 12.0;
 
     pub fn apply(window: &WebviewWindow) -> &'static str {
         if AnyClass::get(c"NSGlassEffectView").is_some() && liquid_glass(window).is_some() {
@@ -52,8 +65,20 @@ mod platform {
         // SAFETY: `ns_window()` returns the live NSWindow backing `window`, which outlives this call,
         // and we only touch it on the main thread (checked above).
         let ns_window = unsafe { ptr.cast::<NSWindow>().as_ref() }?;
+        let size = window.inner_size().ok()?.to_logical::<f64>(window.scale_factor().ok()?);
+        // The glass draws its own shadow; the window's shadow would double it.
+        window.set_shadow(false).ok()?;
+        window.set_size(LogicalSize::new(size.width + 2.0 * GLASS_INSET, size.height + 2.0 * GLASS_INSET)).ok()?;
         let content = ns_window.contentView()?;
-        let glass = NSGlassEffectView::initWithFrame(mtm.alloc(), content.bounds());
+        let bounds = content.bounds();
+        let frame = NSRect::new(
+            objc2_foundation::NSPoint::new(bounds.origin.x + GLASS_INSET, bounds.origin.y + GLASS_INSET),
+            objc2_foundation::NSSize::new(
+                bounds.size.width - 2.0 * GLASS_INSET,
+                bounds.size.height - 2.0 * GLASS_INSET,
+            ),
+        );
+        let glass = NSGlassEffectView::initWithFrame(mtm.alloc(), frame);
         glass.setCornerRadius(CORNER_RADIUS);
         glass.setAutoresizingMask(
             NSAutoresizingMaskOptions::ViewWidthSizable | NSAutoresizingMaskOptions::ViewHeightSizable,

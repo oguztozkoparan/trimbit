@@ -110,15 +110,15 @@ pub fn summary_text(inner: &Inner) -> String {
     };
     format!(
         "Headroom savings (via Trimbit)\n\
-         Session: {} tokens saved ({}), {} saved, {} requests\n\
-         Lifetime: {} tokens saved, {} saved, {} requests\n\
+         Session: {} tokens removed ({} of input), ≈ {} estimated value, {} requests\n\
+         Lifetime: {} tokens removed, ≈ {} estimated value, {} requests\n\
          Proxy, all layers: {} tokens saved ({})",
         format::grouped(s.session.tokens_saved),
         format::percent(s.session.savings_percent),
-        format::usd(s.session.total_usd),
+        format::usd(s.session.compression_usd),
         format::grouped(s.session.requests),
         format::grouped(s.lifetime.tokens_saved),
-        format::usd(s.lifetime.total_usd),
+        format::usd(s.lifetime.compression_usd),
         format::grouped(s.lifetime.requests),
         format::grouped(s.all_layers_saved),
         format::percent(s.all_layers_percent),
