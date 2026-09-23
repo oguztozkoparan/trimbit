@@ -5,8 +5,6 @@ use std::sync::OnceLock;
 
 use tauri::WebviewWindow;
 
-pub const CORNER_RADIUS: f64 = 16.0;
-
 static CURRENT: OnceLock<&'static str> = OnceLock::new();
 
 /// The material in use, so the UI can pick matching tints: `glass`, `vibrancy`, `acrylic` or `solid`.
@@ -28,7 +26,8 @@ mod platform {
     use tauri::window::{Effect, EffectState, EffectsBuilder};
     use tauri::WebviewWindow;
 
-    use super::CORNER_RADIUS;
+    // Matches --panel-radius for macOS in src/styles.css.
+    const CORNER_RADIUS: f64 = 16.0;
 
     pub fn apply(window: &WebviewWindow) -> &'static str {
         if AnyClass::get(c"NSGlassEffectView").is_some() && liquid_glass(window).is_some() {
