@@ -21,12 +21,12 @@
     "site:build": "tsc --noEmit && vite build --config website/vite.config.ts && cp branding/png/social-card.png website/dist/"
   },
   "dependencies": {
-    "@tauri-apps/api": "2.11.1"
+    "@tauri-apps/api": "2.12.0"
   },
   "devDependencies": {
-    "@tauri-apps/cli": "2.11.5",
+    "@tauri-apps/cli": "2.12.0",
     "typescript": "7.0.2",
-    "vite": "8.3.0",
-    "vitest": "5.0.1"
+    "vite": "8.3.1",
+    "vitest": "5.0.2"
   }
 }
